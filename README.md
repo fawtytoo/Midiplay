@@ -1,6 +1,9 @@
 # Midiplay
 
 ## A functional MUS/MIDI library/player.
+Currently for Linux only.
+The library is written in pure C with no dependencies.
+The player uses the SDL2 library for audio output.
 
 ### Inspiration
 The inspiration for this project came from the original DOOM source code.

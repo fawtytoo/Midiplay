@@ -8,7 +8,7 @@ The player uses the SDL2 library for audio output.
 ### Inspiration
 The inspiration for this project came from the original DOOM source code.
 
-The DOOM source code did not come with the ability to play music. DOOM music is in the MUS form; a derivitive of MIDI. It has the same basic event/time delay structure as MIDI.
+The DOOM source code did not come with the ability to play music. DOOM music is in the MUS form; a derivative of MIDI. It has the same basic event/time delay structure as MIDI.
 
 This project can play both MUS and MIDI files due to their similar structure. MIDI type 1 files are supported; type 0 & 2 are unknown due to lack of suitable files to test with.
 

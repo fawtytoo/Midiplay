@@ -17,7 +17,22 @@ The project has been created as a stand alone library. It has an external main.c
 
 Playback is done using a square wave, because this is the simplest wave to create.
 
+- 16 Channels (instruments not supported).
+- 24 Voices (minimum for General MIDI Level 1 Spec).
+
 ### Focus
 The project is meant for demonstration purposes only, but is functional as a player in itself. However, its focus is on event parsing and timing accuracy, rather than dealing with all possible events and instrument sounds.
 
 This project deals with timing somewhat differently than many other MIDI projects. The timing here is done using the tick count used in time delay values only. It does not make further calculations on samples per tick. The time delay values and samples per tick are kept separate. Samples per tick are solely used for playback. This gives 2 advantages: ensures synchronisation across tracks, and less time is spent checking for new events.
+
+### Events
+The library handles only a few basic events, but enough that would satisfy most MIDI/MUS data.
+- Note On
+- Note Off
+- Pitch Wheel (fixed 2 semitones up/down)
+- After Touch
+- Sustain
+- Tempo (MIDI only)
+- Channel Volume
+- Panning
+- All Notes Off

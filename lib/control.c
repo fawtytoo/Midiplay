@@ -159,7 +159,7 @@ typedef struct
     CHANNEL     *channel;
     int         note;
     int         volume; // midi specific
-    int         playing;
+    int         playing, sustain;
     float       width, sample;
 } VOICE;
 
@@ -224,7 +224,7 @@ void initTracks()
     resetControls();
 
     for (voice = 0; voice < VOICES; voice++)
-        midVoice[voice].playing = 0;
+        midVoice[voice].playing = midVoice[voice].sustain = 0;
 
     numTracksEnded = 0;
 }
@@ -255,7 +255,7 @@ void eventNoteOn()
     }
 
     for (voice = 0; voice < VOICES; voice++)
-        if (midVoice[voice].playing == 0)
+        if (midVoice[voice].playing == 0 && midVoice[voice].sustain == 0)
             break;
 
     if (voice == VOICES)
@@ -336,6 +336,20 @@ void eventAftertouch()
             midVoice[voice].volume = volume;
 }
 
+void eventSustain(int sustain)
+{
+    int         voice;
+
+    for (voice = 0; voice < VOICES; voice++)
+        if (sustain)
+        {
+            if (midVoice[voice].playing)
+                midVoice[voice].sustain = 1;
+        }
+        else
+            midVoice[voice].sustain = 0;
+}
+
 void eventSetTempo()
 {
     beatTempo = (curTrack->event.data[0] << 16) | (curTrack->event.data[1] << 8) | curTrack->event.data[2];
@@ -379,10 +393,13 @@ void eventMessage()
         resetControls();
         break;
 
+      case MM_SUSTAIN:
+        eventSustain((value & 192) >> 6);
+        break;
+
       case MM_INSTR:
       case MM_EXPRESS:
       case MM_MODWHEEL:
-      case MM_SUSTAIN:
       case MM_REG_LSB:
       case MM_REG_MSB:
         break;
@@ -604,7 +621,7 @@ void generateSamples(short *buffer, int samples)
 
     for (voice = 0; voice < VOICES; voice++)
     {
-        if (midVoice[voice].playing == 0)
+        if (midVoice[voice].playing == 0 && midVoice[voice].sustain == 0)
             continue;
 
         volume = musicVolume * volumeTable[midVoice[voice].channel->volume];

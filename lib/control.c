@@ -1,7 +1,8 @@
-// midi play
+// midiplay
+
+// Copyright 2022 by Steve Clark
 
 #include "common.h"
-#include "music.h"
 
 #define TICKSAMPLES ((float)musicSamplerate * (float)beatTempo / (float)beatTicks) / 1000000.0f
 
@@ -189,6 +190,20 @@ int         beatTicks, beatTempo;
 float       tickSamples, playSamples;
 int         tickTock;
 
+int         timeTicks;
+int         timeTempo;
+int         timeLast = 0;
+
+void updateTime()
+{
+    timeTempo += beatTempo;
+    timeTicks += (timeTempo / 1000000);
+    timeTempo %= 1000000;
+
+    // store timeTicks in timeLast, as timeTicks might get reset
+    timeLast = timeTicks;
+}
+
 void resetControls()
 {
     int         channel;
@@ -227,6 +242,8 @@ void initTracks()
         midVoice[voice].playing = midVoice[voice].sustain = 0;
 
     numTracksEnded = 0;
+
+    timeTicks = timeTempo = 0;
 }
 
 void eventNoteOff()
@@ -360,13 +377,18 @@ void eventSetTempo()
 void eventEndOfTrack()
 {
     curTrack->done = 1;
+    curTrack->doEvent = NULL; // midi specific
     numTracksEnded++;
     if (numTracksEnded < numTracks)
         return;
 
-    musicPlaying = 0;
+    if (musicLooping == 0)
+    {
+        musicPlaying = 0;
+        return;
+    }
+
     initTracks(); // ready to play again
-    musicPlaying = musicLooping;
 }
 
 void eventMessage()
@@ -470,7 +492,7 @@ int getMusEvent()
 
       case 0x60: // score end
         eventEndOfTrack();
-        return 0;
+        return 1; // returning zero could get us caught in an infinite while loop
 
       case 0x70:
         // requires one data byte but is unused
@@ -581,7 +603,7 @@ void trackMusEvents()
         return;
 
     time = 0;
-    while (time == 0)
+    while (time == 0) // EOT event must not return zero
         time = getMusEvent();
 
     curTrack->time += time;
@@ -595,14 +617,14 @@ void trackMidEvents()
     for (track = 0; track < numTracks; track++)
     {
         curTrack = &midTrack[track];
-        if (curTrack->done)
-            continue;
-
         if (curTrack->time > tickTock)
             continue;
 
         if (curTrack->doEvent)
             curTrack->doEvent();
+
+        if (curTrack->done)
+            continue;
 
         ticks = getLength();
         curTrack->time += ticks;
@@ -660,21 +682,30 @@ void loadMusTrack(BYTE *data)
     resetMidi = 0;
 }
 
-int loadMidTracks(int count, BYTE *data)
+int loadMidTracks(int count, BYTE *data, int size)
 {
     int         track;
     int         length;
 
     for (track = 0; track < count; track++)
     {
+        if (size < 8)
+            return 1;
+
         if (*(UINT *)data != ('M' | ('T' << 8) | ('r' << 16) | ('k' << 24)))
             return 1; // invalid header
 
         data += 4;
         length = __builtin_bswap32(*(UINT *)data);
         data += 4;
+
+        size -= 8;
+        if (size < length)
+            return 1;
+
         midTrack[track].data = data;
         data += length;
+        size -= length;
     }
 
     numTracks = count;
@@ -684,4 +715,4 @@ int loadMidTracks(int count, BYTE *data)
     return 0;
 }
 
-// midi play
+// midiplay

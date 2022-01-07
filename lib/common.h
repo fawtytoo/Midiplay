@@ -1,4 +1,6 @@
-// midi play
+// midiplay
+
+// Copyright 2022 by Steve Clark
 
 #ifndef __COMMON_H__
 #define __COMMON_H__
@@ -20,18 +22,23 @@ extern int      musicSamplerate;
 extern int      musicPlaying, musicLooping;
 extern int      musicVolume;
 
-extern int      beatTicks;
+extern int      beatTicks, beatTempo;
 extern int      tickTock;
 extern float    tickSamples, playSamples;
 
+extern int      timeLast;
+
+extern int      numTracks, numTracksEnded;
+
 void loadMusTrack(BYTE *);
-int loadMidTracks(int, BYTE *);
+int loadMidTracks(int, BYTE *, int);
 void initTracks(void);
 void trackMusEvents(void);
 void trackMidEvents(void);
+void updateTime(void);
 
 void generateSamples(short *, int);
 
 #endif
 
-// midi play
+// midiplay

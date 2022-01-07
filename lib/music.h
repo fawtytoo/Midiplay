@@ -1,32 +1,24 @@
-// midi play
+// midiplay
+
+// Copyright 2022 by Steve Clark
 
 #ifndef __MUSIC_H__
 #define __MUSIC_H__
 
-enum
-{
-    MUSIC_PAUSE,
-    MUSIC_RESUME
-};
+#define MUSIC_PAUSE         0
+#define MUSIC_PLAY          1
 
-// SAMPLERATE
+#define MUSIC_PLAYONCE      0
+#define MUSIC_LOOPING       1
+
 void MUSIC_Init(int);
-
-// data, size, looping
-void MUSIC_Play(void *, int, int);
-
-// pause or resume
-void MUSIC_Pause(int);
-
-// volume between 0 & 127
+int MUSIC_Load(void *, int, int);
+void MUSIC_Play(int);
 void MUSIC_SetVolume(int);
-
-// music is rendered as stereo 16bit signed samples
 void MUSIC_Output(short *, int);
-
-// not really necessary for DOOM but a handy call for testing purposes
 int MUSIC_IsPlaying(void);
+int MUSIC_Time(void);
 
 #endif
 
-// midi play
+// midiplay

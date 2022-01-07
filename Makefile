@@ -1,4 +1,6 @@
-# doom music
+# Midiplay
+
+# Copyright (C) 2022 by Steve Clark
 
 TARGET = midiplay
 
@@ -21,4 +23,4 @@ clean:
 install:	all
 	cp $(TARGET) ~/.local/bin
 
-# doom music
+# Midiplay

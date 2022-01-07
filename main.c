@@ -1,12 +1,17 @@
-// midi play
+// midiplay
+
+// Copyright 2022 by Steve Clark
 
 #include <SDL2/SDL.h>
 
 #include <sys/stat.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <errno.h>
 
 #include "lib/music.h"
+
+#define ERROR           printf("%s\n\t%s\n", argv[arg], strerror(errno))
 
 #define SAMPLERATE      44100
 #define SAMPLECOUNT     2048
@@ -18,6 +23,14 @@ void sdlCallback(void *userdata, Uint8 *buffer, int length)
     cb_t        cb = userdata;
 
     cb((short *)buffer, length / 2);
+}
+ 
+int digits(int number, int count)
+{
+    if (number > 9)
+        count = digits(number / 10, count + 1);
+
+    return count;
 }
 
 int main(int argc, char **argv)
@@ -31,6 +44,8 @@ int main(int argc, char **argv)
 
     int                 arg;
     char                *name;
+
+    int                 length, count;
 
     if (argc < 2)
         return 1;
@@ -53,31 +68,53 @@ int main(int argc, char **argv)
     {
         if (stat(argv[arg], &status) < 0)
         {
-            printf("Error checking %s\n", argv[arg]);
+            ERROR;
+            continue;
+        }
+
+        if (S_ISDIR(status.st_mode))
+        {
+            errno = EISDIR; // needs to be set explicitly
+            ERROR;
             continue;
         }
 
         if ((file = fopen(argv[arg], "rb")) == NULL)
         {
-            printf("Error opening %s\n", argv[arg]);
+            ERROR;
             continue;
         }
-
-        if ((name = strrchr(argv[arg], '/')) == NULL)
-            name = argv[arg];
-        else
-            name++;
-
-        printf("Playing: %s\n", name);
 
         buffer = malloc(status.st_size);
         fread(buffer, status.st_size, 1, file);
         fclose(file);
 
-        MUSIC_Play(buffer, status.st_size, 0);
+        if (MUSIC_Load(buffer, status.st_size, MUSIC_PLAYONCE))
+        {
+            if ((name = strrchr(argv[arg], '/')) == NULL)
+                name = argv[arg];
+            else
+                name++;
 
-        while (MUSIC_IsPlaying())
-            SDL_Delay(1);
+            printf("Playing: %s\n", name);
+
+            length = MUSIC_Time();
+            count = digits(length / 60, 1);
+            printf("\t %*s / %i:%02i\033[1A\n", count + 3, " ", length / 60, length % 60);
+
+            MUSIC_Play(MUSIC_PLAY);
+
+            while (MUSIC_IsPlaying())
+            {
+                SDL_Delay(1);
+                length = MUSIC_Time();
+                printf("\t %*i:%02i\033[1A\n", count, length / 60, length % 60);
+            }
+
+            printf("\033[K");
+        }
+        else
+            printf("Invalid file: %s\n", argv[arg]);
 
         free(buffer);
     }
@@ -87,4 +124,4 @@ int main(int argc, char **argv)
     return 0;
 }
 
-// midi play
+// midiplay

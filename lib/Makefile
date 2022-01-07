@@ -1,6 +1,8 @@
-# MIDI player
+# Midiplay
 
-TARGET = libmusic.so
+# Copyright 2022 by Steve Clark
+
+TARGET = libmidiplay.so
 
 CC = gcc
 
@@ -21,4 +23,4 @@ clean:
 install:	all
 	cp $(TARGET) ~/.local/lib
 
-# MIDI
+# Midiplay

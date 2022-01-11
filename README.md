@@ -36,3 +36,20 @@ The library handles only a few basic events, but enough that would satisfy most 
 - Channel Volume
 - Panning
 - All Notes Off
+
+### MUS and Raptor
+The 1994 game Raptor also used MUS files, but were played at a different rate than DOOM music.
+
+In order to accommodate different tick rates that may arise in MUS data, Midiplay utilises unused bytes in the MUS header.
+
+Although MUS documentation suggests a tick rate per second for MUS (DOOM = 140Hz, Raptor = 70Hz), it seemed better to translate these rates to fall in line with MIDI specification which uses a default beat (A.K.A. quarter note) tempo of 500,000µs (120 beats per minute), thus MUS data can be played using PPQN (parts per quarter note). This has the advantages of having more shared code within Midiplay and less specific code, but also not needing to change the MUS delta times to suit the player.
+
+The MUS header has 2 unused/reserved bytes at the end of the header which can specify the ppqn. A zero value will default to 70ppqn, and any non-zero value will be used instead of the default. The MUS header is 16 bytes long, with the last 2 being unused and can store the ppqn (little endian). For example, changing the value of these 2 bytes to 35 would be suitable for Raptor music. Either 70 or 0, would be suitable for DOOM music.
+
+Advantages of utilising this method is it standardises MUS files, and preserves the track data.
+
+## Further reading
+- [MUS format](https://moddingwiki.shikadi.net/wiki/MUS_Format)
+- [MID format](https://moddingwiki.shikadi.net/wiki/MID_Format)
+- [Technical docs](http://midi.teragonaudio.com/)
+- [Standard MIDI-File Format Spec 1.1](http://www.music.mcgill.ca/~ich/classes/mumt306/StandardMIDIfileformat.html)

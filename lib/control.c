@@ -178,8 +178,6 @@ typedef struct
     int         done;
 } TRACK;
 
-int         resetMidi;
-
 CHANNEL     midChannel[16];
 VOICE       midVoice[VOICES];
 
@@ -230,11 +228,8 @@ void initTracks()
     tickTock = 0;
     playSamples = 0.0f;
 
-    if (resetMidi)
-    {
-        beatTempo = 500000;
-        tickSamples = TICKSAMPLES;
-    }
+    beatTempo = 500000;
+    tickSamples = TICKSAMPLES;
 
     resetControls();
 
@@ -674,12 +669,10 @@ void generateSamples(short *buffer, int samples)
 
 void loadMusTrack(BYTE *data)
 {
+    midTrack[0].data = data;
     curTrack = &midTrack[0];
-    curTrack->data = data;
 
     numTracks = 1;
-
-    resetMidi = 0;
 }
 
 int loadMidTracks(int count, BYTE *data, int size)
@@ -709,8 +702,6 @@ int loadMidTracks(int count, BYTE *data, int size)
     }
 
     numTracks = count;
-
-    resetMidi = 1;
 
     return 0;
 }

@@ -9,7 +9,7 @@
 #include <stdio.h>
 #include <errno.h>
 
-#include "lib/music.h"
+#include "lib/midiplay.h"
 
 #define ERROR           printf("%s\n\t%s\n", argv[arg], strerror(errno))
 

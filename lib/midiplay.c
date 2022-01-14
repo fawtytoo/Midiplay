@@ -121,7 +121,7 @@ void MUSIC_Play(int playing)
     if (musicInit < 2)
         return;
 
-    if (playing == 1 && numTracksEnded == numTracks)
+    if (numTracksEnded == numTracks)
         initTracks();
 
     musicPlaying = playing;
@@ -204,7 +204,24 @@ void MUSIC_Output(short *buffer, int length)
 // Calling this while MUSIC_IsPlaying returns the current position
 int MUSIC_Time()
 {
-    return timeLast / beatTicks;
+    if (musicInit < 2)
+        return 0;
+
+    return timeTicks / beatTicks;
+}
+
+// MUSIC_Loop
+// Changes looping mode
+void MUSIC_Loop(int looping)
+{
+    musicLooping = looping;
+}
+
+// MUSIC_Restart
+// Restarts playback to beginning of music
+void MUSIC_Restart()
+{
+    initTracks();
 }
 
 // midiplay

@@ -18,6 +18,8 @@ void MUSIC_SetVolume(int);
 void MUSIC_Output(short *, int);
 int MUSIC_IsPlaying(void);
 int MUSIC_Time(void);
+void MUSIC_Loop(int);
+void MUSIC_Restart(void);
 
 #endif
 

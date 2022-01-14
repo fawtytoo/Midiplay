@@ -190,16 +190,12 @@ int         tickTock;
 
 int         timeTicks;
 int         timeTempo;
-int         timeLast = 0;
 
 void updateTime()
 {
     timeTempo += beatTempo;
     timeTicks += (timeTempo / 1000000);
     timeTempo %= 1000000;
-
-    // store timeTicks in timeLast, as timeTicks might get reset
-    timeLast = timeTicks;
 }
 
 void resetControls()

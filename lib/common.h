@@ -26,7 +26,7 @@ extern int      beatTicks, beatTempo;
 extern int      tickTock;
 extern float    tickSamples, playSamples;
 
-extern int      timeLast;
+extern int      timeTicks;
 
 extern int      numTracks, numTracksEnded;
 

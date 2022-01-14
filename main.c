@@ -8,10 +8,13 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <errno.h>
+#include <unistd.h>
+#include <termios.h>
+#include <fcntl.h>
 
 #include "lib/midiplay.h"
 
-#define ERROR           printf("%s\n\t%s\n", argv[arg], strerror(errno))
+#define ERROR           printf("%s %s\n\r", argv[arg], strerror(errno))
 
 #define SAMPLERATE      44100
 #define SAMPLECOUNT     2048
@@ -38,6 +41,10 @@ int main(int argc, char **argv)
     SDL_AudioDeviceID   sdlAudio;
     SDL_AudioSpec       want;
 
+    struct termios      termAttr;
+    tcflag_t            localMode, outputMode;
+    int                 blockMode;
+
     struct stat         status;
     FILE                *file;
     char                *buffer;
@@ -47,8 +54,19 @@ int main(int argc, char **argv)
 
     int                 length, count;
 
+    int                 looping = MUSIC_PLAYONCE;
+    int                 playing = MUSIC_PLAY;
+    int                 volume = 100;
+
+    char                key;
+
     if (argc < 2)
+    {
+        printf("Usage: %s [FILES]\n\tSpecify one or more FILES to play\n", argv[0]);
         return 1;
+    }
+
+    printf("P = Play/Pause | N = Next | R = Restart | L = Loop | +/- Volume | Q = Quit\n");
 
     SDL_Init(SDL_INIT_AUDIO);
 
@@ -63,6 +81,15 @@ int main(int argc, char **argv)
     SDL_PauseAudioDevice(sdlAudio, 0);
 
     MUSIC_Init(SAMPLERATE);
+
+    blockMode = fcntl(STDIN_FILENO, F_GETFL, FNONBLOCK);
+    tcgetattr(STDIN_FILENO, &termAttr);
+    localMode = termAttr.c_lflag;
+    outputMode = termAttr.c_oflag;
+    termAttr.c_lflag &= ~(ICANON | ECHO | ISIG);
+    termAttr.c_oflag &= ~ONLCR;
+    tcsetattr(STDIN_FILENO, TCSANOW, &termAttr);
+    fcntl(STDIN_FILENO, F_SETFL, FNONBLOCK);
 
     for (arg = 1; arg < argc; arg++)
     {
@@ -89,35 +116,77 @@ int main(int argc, char **argv)
         fread(buffer, status.st_size, 1, file);
         fclose(file);
 
-        if (MUSIC_Load(buffer, status.st_size, MUSIC_PLAYONCE))
+        if (MUSIC_Load(buffer, status.st_size, looping))
         {
             if ((name = strrchr(argv[arg], '/')) == NULL)
                 name = argv[arg];
             else
                 name++;
 
-            printf("Playing: %s\n", name);
+            count = digits(argc - 1, 1);
+            printf("Playing %*i/%i: %s\r\n", count, arg, argc - 1, name);
 
             length = MUSIC_Time();
             count = digits(length / 60, 1);
-            printf("\t %*s / %i:%02i\033[1A\n", count + 3, " ", length / 60, length % 60);
+            printf("[  ] [    ] %*s / %i:%02i\r", count + 3, " ", length / 60, length % 60);
 
-            MUSIC_Play(MUSIC_PLAY);
+            MUSIC_Play(playing);
 
             while (MUSIC_IsPlaying())
             {
                 SDL_Delay(1);
-                length = MUSIC_Time();
-                printf("\t %*i:%02i\033[1A\n", count, length / 60, length % 60);
-            }
 
-            printf("\033[K");
+                key = getc(stdin);
+                if (key == 'l')
+                {
+                    looping = 1 - looping;
+                    MUSIC_Loop(looping);
+                }
+                else if (key == 'p')
+                {
+                    playing = 1 - playing;
+                    MUSIC_Play(playing);
+                }
+                else if (key == 'n')
+                    break;
+                else if (key == 'q')
+                {
+                    arg = argc;
+                    break;
+                }
+                else if (key == '-')
+                {
+                    if (volume > 0)
+                    {
+                        volume--;
+                        MUSIC_SetVolume(volume * 127 / 100);
+                    }
+                }
+                else if (key == '=')
+                {
+                    if (volume < 100)
+                    {
+                        volume++;
+                        MUSIC_SetVolume(volume * 127 / 100);
+                    }
+                }
+                else if (key == 'r')
+                    MUSIC_Restart();
+
+                length = MUSIC_Time();
+                printf("[%s%s] [%3i%%] %*i:%02i\r", playing ? " " : "P", looping ? "L" : " ", volume, count, length / 60, length % 60);
+            }
         }
         else
-            printf("Invalid file: %s\n", argv[arg]);
+            printf("Invalid file: %s\n\r", argv[arg]);
 
         free(buffer);
     }
+
+    termAttr.c_lflag = localMode;
+    termAttr.c_oflag = outputMode;
+    tcsetattr(STDIN_FILENO, TCSANOW, &termAttr);
+    fcntl(STDIN_FILENO, F_SETFL, blockMode);
 
     SDL_Quit();
 

@@ -90,9 +90,8 @@ int Midiplay_Load(void *data, int size, int looping)
 
     initTracks();
     musicLooping = 0;
-    musicPlaying = 1;
 
-    while (musicPlaying)
+    while (numTracksEnded < numTracks)
     {
         updateTime();
         musicEvents();
@@ -158,9 +157,9 @@ void Midiplay_Output(short *buffer, int length)
 
         if (playSamples < 1.0f)
         {
-            playSamples += tickSamples;
             updateTime();
             musicEvents();
+            playSamples += tickSamples;
             tickTock++;
         }
 

@@ -70,6 +70,8 @@ int         tickTock;
 int         timeTicks;
 int         timeTempo;
 
+int         oldTrack = 0;
+
 void updateTime()
 {
     timeTempo += beatTempo;
@@ -113,8 +115,13 @@ void setTempo()
 void endOfTrack()
 {
     curTrack->done = 1;
-    curTrack->midi.doEvent = NULL; // midi specific
     numTracksEnded++;
+}
+
+void endOfMidiTrack()
+{
+    endOfTrack();
+    curTrack->midi.doEvent = NULL;
     if (numTracksEnded < numTracks)
         return;
 
@@ -124,7 +131,12 @@ void endOfTrack()
         return;
     }
 
-    initTracks(); // ready to play again
+    initTracks();
+    // at this point we need to parse a new event from track 0
+    // but we may be in the middle of several tracks
+    // this is some hack! but it's more straight forward
+    oldTrack = 0;
+    curTrack = &midTrack[0];
 }
 
 UINT getLength()
@@ -141,13 +153,15 @@ UINT getLength()
     return length;
 }
 
-int getMusEvent()
+int getMusEvent(int *time)
 {
     BYTE        data, last;
 
     data = *curTrack->pos++;
     curTrack->event.channel = data & 0x0f;
     last = data & 0x80;
+
+    *time = 0;
 
     switch (data & 0x70)
     {
@@ -187,8 +201,12 @@ int getMusEvent()
         break;
 
       case 0x60: // score end
-        endOfTrack();
-        return 1; // returning zero could get us caught in an infinite while loop
+        if (musicLooping)
+            initTracks();
+        else
+            endOfTrack();
+
+        return 1 - musicLooping;
 
       case 0x70:
         // requires one data byte but is unused
@@ -198,9 +216,9 @@ int getMusEvent()
     }
 
     if (last)
-        return getLength();
+        *time = getLength();
 
-    return 0;
+    return last;
 }
 
 void getMidEvent()
@@ -268,7 +286,7 @@ void getMidEvent()
             data = *curTrack->pos++;
             if (data == 0x2f) // end of track
             {
-                curTrack->midi.doEvent = endOfTrack;
+                curTrack->midi.doEvent = endOfMidiTrack;
                 return;
             }
             else if (data == 0x51 && *curTrack->pos == 3)
@@ -298,9 +316,7 @@ void trackMusEvents()
     if (curTrack->time > tickTock)
         return;
 
-    time = 0;
-    while (time == 0) // EOT event must not return zero
-        time = getMusEvent();
+    while (getMusEvent(&time) == 0);
 
     curTrack->time += time;
 }
@@ -317,8 +333,12 @@ void trackMidEvents()
         if (curTrack->time > tickTock)
             continue;
 
+        oldTrack = track;
+
         if (curTrack->midi.doEvent)
             curTrack->midi.doEvent();
+
+        track = oldTrack;
 
         if (curTrack->done)
             continue;

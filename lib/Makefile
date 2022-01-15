@@ -9,7 +9,7 @@ CC = gcc
 CFLAGS = -O2 -Wall -fPIC
 LDFLAGS =
 
-SOURCE = midiplay.o control.o
+SOURCE = midiplay.o control.o event.o
 
 all:	 $(SOURCE)
 	$(CC) -shared $(SOURCE) -o $(TARGET) $(LDFLAGS)

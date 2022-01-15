@@ -34,22 +34,14 @@ int         musicPlaying = 0;
 
 int         musicVolume = VOLUME;
 
-// MUSIC_Init
-// samplerate   The samplerate of the audio output stream
-void MUSIC_Init(int samplerate)
+void Midiplay_Init(int samplerate)
 {
     musicSamplerate = samplerate;
 
     musicInit = 1;
 }
 
-// MUSIC_Load
-// data         Memory pointer to the music data
-// size         Size of the music data in bytes
-// looping      Whether the music will repeat (0 = once, 1 = repeating)
-
-// Returns 1 on success, 0 on failure
-int MUSIC_Load(void *data, int size, int looping)
+int Midiplay_Load(void *data, int size, int looping)
 {
     HDR_MUS     *hdrMus;
     HDR_MID     *hdrMid;
@@ -113,9 +105,7 @@ int MUSIC_Load(void *data, int size, int looping)
     return 1;
 }
 
-// MUSIC_Play
-// playing      0 = pause, 1 = play
-void MUSIC_Play(int playing)
+void Midiplay_Play(int playing)
 {
     // if there's nothing to play, don't force it
     if (musicInit < 2)
@@ -127,9 +117,7 @@ void MUSIC_Play(int playing)
     musicPlaying = playing;
 }
 
-// MUSIC_Volume
-// volume       Range 0 to 127, 0 = minimum, 127 = maximum
-void MUSIC_SetVolume(int volume)
+void Midiplay_SetVolume(int volume)
 {
     if (volume < 0)
         volume = 0;
@@ -139,10 +127,7 @@ void MUSIC_SetVolume(int volume)
     musicVolume = VOLUME * volume / 127;
 }
 
-// MUSIC_IsPlaying
-// Returns 0 if not playing
-// Paused/looping music will still return 1
-int MUSIC_IsPlaying()
+int Midiplay_IsPlaying()
 {
     if (musicInit < 2)
         return 0;
@@ -153,12 +138,7 @@ int MUSIC_IsPlaying()
     return 0;
 }
 
-// MUSIC_Output
-// buffer       Pointer to pre-allocated buffer
-// length       Length of buffer
-
-// Music is rendered as stereo 16bit signed samples
-void MUSIC_Output(short *buffer, int length)
+void Midiplay_Output(short *buffer, int length)
 {
     int         samples;
 
@@ -197,12 +177,7 @@ void MUSIC_Output(short *buffer, int length)
     }
 }
 
-// MUSIC_Time
-// Returns time in seconds
-
-// Calling this immediately after MUSIC_Load returns the length of the music
-// Calling this while MUSIC_IsPlaying returns the current position
-int MUSIC_Time()
+int Midiplay_Time()
 {
     if (musicInit < 2)
         return 0;
@@ -210,16 +185,12 @@ int MUSIC_Time()
     return timeTicks / beatTicks;
 }
 
-// MUSIC_Loop
-// Changes looping mode
-void MUSIC_Loop(int looping)
+void Midiplay_Loop(int looping)
 {
     musicLooping = looping;
 }
 
-// MUSIC_Restart
-// Restarts playback to beginning of music
-void MUSIC_Restart()
+void Midiplay_Restart()
 {
     initTracks();
 }

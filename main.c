@@ -54,8 +54,8 @@ int main(int argc, char **argv)
 
     int                 length, count;
 
-    int                 looping = MUSIC_PLAYONCE;
-    int                 playing = MUSIC_PLAY;
+    int                 looping = 0;
+    int                 playing = 1;
     int                 volume = 100;
 
     char                key;
@@ -75,12 +75,12 @@ int main(int argc, char **argv)
     want.channels = 2;
     want.samples = SAMPLECOUNT;
     want.callback = sdlCallback;
-    want.userdata = MUSIC_Output;
+    want.userdata = Midiplay_Output;
 
     sdlAudio = SDL_OpenAudioDevice(NULL, 0, &want, NULL, 0);
     SDL_PauseAudioDevice(sdlAudio, 0);
 
-    MUSIC_Init(SAMPLERATE);
+    Midiplay_Init(SAMPLERATE);
 
     blockMode = fcntl(STDIN_FILENO, F_GETFL, FNONBLOCK);
     tcgetattr(STDIN_FILENO, &termAttr);
@@ -116,7 +116,7 @@ int main(int argc, char **argv)
         fread(buffer, status.st_size, 1, file);
         fclose(file);
 
-        if (MUSIC_Load(buffer, status.st_size, looping))
+        if (Midiplay_Load(buffer, status.st_size, looping))
         {
             if ((name = strrchr(argv[arg], '/')) == NULL)
                 name = argv[arg];
@@ -126,13 +126,13 @@ int main(int argc, char **argv)
             count = digits(argc - 1, 1);
             printf("Playing %*i/%i: %s\r\n", count, arg, argc - 1, name);
 
-            length = MUSIC_Time();
+            length = Midiplay_Time();
             count = digits(length / 60, 1);
             printf("[  ] [    ] %*s / %i:%02i\r", count + 3, " ", length / 60, length % 60);
 
-            MUSIC_Play(playing);
+            Midiplay_Play(playing);
 
-            while (MUSIC_IsPlaying())
+            while (Midiplay_IsPlaying())
             {
                 SDL_Delay(1);
 
@@ -140,12 +140,12 @@ int main(int argc, char **argv)
                 if (key == 'l')
                 {
                     looping = 1 - looping;
-                    MUSIC_Loop(looping);
+                    Midiplay_Loop(looping);
                 }
                 else if (key == 'p')
                 {
                     playing = 1 - playing;
-                    MUSIC_Play(playing);
+                    Midiplay_Play(playing);
                 }
                 else if (key == 'n')
                     break;
@@ -159,7 +159,7 @@ int main(int argc, char **argv)
                     if (volume > 0)
                     {
                         volume--;
-                        MUSIC_SetVolume(volume * 127 / 100);
+                        Midiplay_SetVolume(volume * 127 / 100);
                     }
                 }
                 else if (key == '=')
@@ -167,13 +167,13 @@ int main(int argc, char **argv)
                     if (volume < 100)
                     {
                         volume++;
-                        MUSIC_SetVolume(volume * 127 / 100);
+                        Midiplay_SetVolume(volume * 127 / 100);
                     }
                 }
                 else if (key == 'r')
-                    MUSIC_Restart();
+                    Midiplay_Restart();
 
-                length = MUSIC_Time();
+                length = Midiplay_Time();
                 printf("[%s%s] [%3i%%] %*i:%02i\r", playing ? " " : "P", looping ? "L" : " ", volume, count, length / 60, length % 60);
             }
         }

@@ -176,6 +176,8 @@ int main(int argc, char **argv)
                 length = Midiplay_Time();
                 printf("[%s%s] [%3i%%] %*i:%02i\r", playing ? " " : "P", looping ? "L" : " ", volume, count, length / 60, length % 60);
             }
+
+            printf("\33[K\r");
         }
         else
             printf("Invalid file: %s\n\r", argv[arg]);

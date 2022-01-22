@@ -159,22 +159,21 @@ void eventNoteOn()
 
     for (voice = 0; voice < VOICES; voice++)
         if (midVoice[voice].playing == 0 && midVoice[voice].sustain == 0)
+        {
+            if (volume < 128)
+                channel->volume = volume;
+
+            midVoice[voice].channel = channel;
+
+            midVoice[voice].width = (float)musicSamplerate / frequencyTable[note];
+            midVoice[voice].sample = midVoice[voice].width;
+
+            midVoice[voice].note = note;
+            midVoice[voice].volume = 127;
+            midVoice[voice].playing = 1;
+
             break;
-
-    if (voice == VOICES)
-        return; // 4:0 Out of memory
-
-    if (volume < 128)
-        channel->volume = volume;
-
-    midVoice[voice].channel = channel;
-
-    midVoice[voice].width = (float)musicSamplerate / frequencyTable[note];
-    midVoice[voice].sample = midVoice[voice].width;
-
-    midVoice[voice].note = note;
-    midVoice[voice].volume = 127;
-    midVoice[voice].playing = 1;
+        }
 }
 
 void eventMuteNotes()
@@ -197,7 +196,7 @@ void eventPitchWheel()
 
     for (voice = 0; voice < VOICES; voice++)
     {
-        if (midVoice[voice].channel != channel)
+        if (midVoice[voice].playing == 0 || midVoice[voice].channel != channel)
             continue;
 
         note = midVoice[voice].note;
@@ -235,18 +234,22 @@ void eventAftertouch()
     int         voice;
 
     for (voice = 0; voice < VOICES; voice++)
-        if (midVoice[voice].note == note && midVoice[voice].channel == channel)
-            midVoice[voice].volume = volume;
+        if (midVoice[voice].playing && midVoice[voice].channel == channel)
+            if (midVoice[voice].note == note)
+                midVoice[voice].volume = volume;
 }
 
+// the sustain controller message is handled as sostenuto instead
+// CC64 as CC66
 void eventSustain(int sustain)
 {
+    CHANNEL     *channel = &midChannel[eventData->channel];
     int         voice;
 
     for (voice = 0; voice < VOICES; voice++)
         if (sustain)
         {
-            if (midVoice[voice].playing)
+            if (midVoice[voice].playing && midVoice[voice].channel == channel)
                 midVoice[voice].sustain = 1;
         }
         else
@@ -278,7 +281,7 @@ void eventMessage()
         break;
 
       case MM_SUSTAIN:
-        eventSustain((value & 192) >> 6);
+        eventSustain(value >> 6);
         break;
 
       case MM_INSTR:

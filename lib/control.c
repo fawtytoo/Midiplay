@@ -338,6 +338,7 @@ void trackMidEvents()
         if (curTrack->midi.doEvent)
             curTrack->midi.doEvent();
 
+        // when all tracks have ended, this will be set to track 0
         track = oldTrack;
 
         if (curTrack->done)

@@ -12,7 +12,7 @@ typedef struct
     WORD        priChannels;
     WORD        secChannels;
     WORD        numInstruments;
-    WORD        ticks; // we're going to use this to specify ppqn, default 70
+    WORD        ppqn; // we're going to use this to specify ppqn, default 70
 } __attribute__ ((packed)) HDR_MUS;
 
 typedef struct
@@ -21,7 +21,7 @@ typedef struct
     int         length;
     WORD        type;
     WORD        ntracks;
-    WORD        ticks;
+    WORD        ppqn;
 } __attribute__ ((packed)) HDR_MID;
 
 function    musicEvents;
@@ -69,8 +69,8 @@ int Midiplay_Load(void *data, int size, int looping)
         loadMusTrack(data + hdrMus->scoreStart);
 
         beatTicks = 70;
-        if (hdrMus->ticks > 0)
-            beatTicks = hdrMus->ticks;
+        if (hdrMus->ppqn > 0)
+            beatTicks = hdrMus->ppqn;
 
         musicEvents = trackMusEvents;
     }
@@ -82,7 +82,7 @@ int Midiplay_Load(void *data, int size, int looping)
         if (loadMidTracks(__builtin_bswap16(hdrMid->ntracks), data + sizeof(HDR_MID), size - sizeof(HDR_MID)) == 1)
             return 0; // track header failed
 
-        beatTicks = __builtin_bswap16(hdrMid->ticks);
+        beatTicks = __builtin_bswap16(hdrMid->ppqn);
         musicEvents = trackMidEvents;
     }
     else

@@ -5,6 +5,9 @@
 #include "common.h"
 #include "event.h"
 
+#define NOTE_PLAY       1
+#define NOTE_SUSTAIN    2
+
 float       frequencyTable[128] =
 {
     8.175799f, 8.661958f, 9.177023f, 9.722718f, 10.300862f, 10.913381f, 11.562326f, 12.249859f,
@@ -97,6 +100,7 @@ typedef struct
 {
     int         volume;
     int         pan;
+    int         sustain;
 } CHANNEL;
 
 typedef struct
@@ -104,7 +108,7 @@ typedef struct
     CHANNEL     *channel;
     int         note;
     int         volume; // midi specific
-    int         playing, sustain;
+    int         playing; // bit field
     float       width, sample;
 } VOICE;
 
@@ -118,7 +122,7 @@ void resetVoices()
     int         voice;
 
     for (voice = 0; voice < VOICES; voice++)
-        midVoice[voice].playing = midVoice[voice].sustain = 0;
+        midVoice[voice].playing = 0;
 }
 
 void resetControls()
@@ -129,6 +133,7 @@ void resetControls()
     {
         midChannel[channel].volume = 100;
         midChannel[channel].pan = 64;
+        midChannel[channel].sustain = 0;
     }
 }
 
@@ -136,12 +141,14 @@ void eventNoteOff()
 {
     CHANNEL     *channel = &midChannel[eventData->channel];
     int         note = eventData->data[0];
-    //int         volume = curTrack->event.data[1];
+    //int         volume = eventData->data[1];
     int         voice;
 
     for (voice = 0; voice < VOICES; voice++)
-        if (midVoice[voice].channel == channel && midVoice[voice].note == note)
-            midVoice[voice].playing = 0;
+        if (midVoice[voice].channel == channel)
+            if (midVoice[voice].note == note)
+                if (midVoice[voice].playing)
+                    midVoice[voice].playing &= NOTE_SUSTAIN;
 }
 
 void eventNoteOn()
@@ -158,7 +165,7 @@ void eventNoteOn()
     }
 
     for (voice = 0; voice < VOICES; voice++)
-        if (midVoice[voice].playing == 0 && midVoice[voice].sustain == 0)
+        if (midVoice[voice].playing == 0)
         {
             if (volume < 128)
                 channel->volume = volume;
@@ -170,7 +177,7 @@ void eventNoteOn()
 
             midVoice[voice].note = note;
             midVoice[voice].volume = 127;
-            midVoice[voice].playing = 1;
+            midVoice[voice].playing = NOTE_PLAY | channel->sustain;
 
             break;
         }
@@ -183,7 +190,8 @@ void eventMuteNotes()
 
     for (voice = 0; voice < VOICES; voice++)
         if (midVoice[voice].channel == channel)
-            midVoice[voice].playing = 0;
+            if (midVoice[voice].playing)
+                midVoice[voice].playing &= NOTE_SUSTAIN;
 }
 
 void eventPitchWheel()
@@ -234,26 +242,26 @@ void eventAftertouch()
     int         voice;
 
     for (voice = 0; voice < VOICES; voice++)
-        if (midVoice[voice].playing && midVoice[voice].channel == channel)
+        if (midVoice[voice].channel == channel)
             if (midVoice[voice].note == note)
-                midVoice[voice].volume = volume;
+                if (midVoice[voice].playing)
+                    midVoice[voice].volume = volume;
 }
 
-// the sustain controller message is handled as sostenuto instead
-// CC64 as CC66
 void eventSustain(int sustain)
 {
     CHANNEL     *channel = &midChannel[eventData->channel];
     int         voice;
 
+    channel->sustain = sustain << 1;
+
+    if (sustain == 1)
+        return;
+
     for (voice = 0; voice < VOICES; voice++)
-        if (sustain)
-        {
-            if (midVoice[voice].playing && midVoice[voice].channel == channel)
-                midVoice[voice].sustain = 1;
-        }
-        else
-            midVoice[voice].sustain = 0;
+        if (midVoice[voice].channel == channel)
+            if (midVoice[voice].playing)
+                midVoice[voice].playing &= NOTE_PLAY;
 }
 
 void eventMessage()
@@ -304,7 +312,7 @@ void generateSamples(short *buffer, int samples)
 
     for (voice = 0; voice < VOICES; voice++)
     {
-        if (midVoice[voice].playing == 0 && midVoice[voice].sustain == 0)
+        if (midVoice[voice].playing == 0)
             continue;
 
         volume = musicVolume * volumeTable[midVoice[voice].channel->volume];

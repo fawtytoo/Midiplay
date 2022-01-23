@@ -31,7 +31,7 @@ The library handles only a few basic events, but enough that would satisfy most 
 - Note Off
 - Pitch Wheel (fixed 2 semitones up/down)
 - After Touch
-- Sustain (handled as Sostenuto)
+- Sustain
 - Tempo (MIDI only)
 - Channel Volume
 - Panning

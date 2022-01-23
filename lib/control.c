@@ -50,7 +50,7 @@ int         controllerMap[2][128] =
 typedef struct
 {
     BYTE        *data, *pos;
-    int         time; // tick accumulator
+    int         clock; // accumulator
     struct
     {
         BYTE        running;
@@ -65,7 +65,7 @@ int         numTracks, numTracksEnded;
 
 int         beatTicks, beatTempo;
 float       tickSamples, playSamples;
-int         tickTock;
+int         musicClock;
 
 int         timeTicks;
 int         timeTempo;
@@ -87,11 +87,11 @@ void initTracks()
     {
         midTrack[track].pos = midTrack[track].data;
         midTrack[track].done = 0;
-        midTrack[track].time = 0;
+        midTrack[track].clock = 0;
         midTrack[track].midi.doEvent = NULL;
     }
 
-    tickTock = 0;
+    musicClock = 0;
     playSamples = 0.0f;
 
     beatTempo = 500000;
@@ -308,20 +308,19 @@ void getMidEvent()
 
 void trackMusEvents()
 {
-    int         time;
+    int         ticks;
 
     if (curTrack->done)
         return;
 
-    if (curTrack->time > tickTock)
+    if (curTrack->clock > musicClock)
         return;
 
-    while (getMusEvent(&time) == 0);
+    while (getMusEvent(&ticks) == 0);
 
-    curTrack->time += time;
+    curTrack->clock += ticks;
 }
 
-// a bit of hacking in here to avoid a while loop
 void trackMidEvents()
 {
     int         track, ticks;
@@ -330,7 +329,8 @@ void trackMidEvents()
     {
         curTrack = &midTrack[track];
         eventData = &curTrack->event;
-        if (curTrack->time > tickTock)
+
+        if (curTrack->clock > musicClock)
             continue;
 
         oldTrack = track;
@@ -345,9 +345,10 @@ void trackMidEvents()
             continue;
 
         ticks = getLength();
-        curTrack->time += ticks;
+        curTrack->clock += ticks;
         getMidEvent();
 
+        // a bit of hacking here to avoid a while loop
         if (ticks == 0)
             track--;
     }

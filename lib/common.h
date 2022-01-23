@@ -23,7 +23,7 @@ extern int      musicPlaying, musicLooping;
 extern int      musicVolume;
 
 extern int      beatTicks, beatTempo;
-extern int      tickTock;
+extern int      musicClock;
 extern float    tickSamples, playSamples;
 
 extern int      timeTicks;

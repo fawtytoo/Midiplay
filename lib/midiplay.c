@@ -95,7 +95,7 @@ int Midiplay_Load(void *data, int size, int looping)
     {
         updateTime();
         musicEvents();
-        tickTock++;
+        musicClock++;
     }
 
     musicLooping = looping;
@@ -160,7 +160,7 @@ void Midiplay_Output(short *buffer, int length)
             updateTime();
             musicEvents();
             playSamples += tickSamples;
-            tickTock++;
+            musicClock++;
         }
 
         // how many samples should we play?

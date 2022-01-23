@@ -63,6 +63,8 @@ typedef struct
 TRACK       midTrack[65536], *curTrack;
 int         numTracks, numTracksEnded;
 
+BYTE        prevVolume[16]; // last known note volume on channel
+
 int         beatTicks, beatTempo;
 float       tickSamples, playSamples;
 int         musicClock;
@@ -81,7 +83,7 @@ void updateTime()
 
 void initTracks()
 {
-    int         track;
+    int         track, channel;
 
     for (track = 0; track < numTracks; track++)
     {
@@ -90,6 +92,9 @@ void initTracks()
         midTrack[track].clock = 0;
         midTrack[track].midi.doEvent = NULL;
     }
+
+    for (channel = 0; channel < 16; channel++)
+        prevVolume[channel] = 0;
 
     musicClock = 0;
     playSamples = 0.0f;
@@ -173,9 +178,9 @@ int getMusEvent(int *time)
       case 0x10: // play note
         data = *curTrack->pos++;
         curTrack->event.data[0] = (data & 0x7f);
-        curTrack->event.data[1] = 0x80;
-        if (data & 0x80)
-            curTrack->event.data[1] = (*curTrack->pos++ & 0x7f);
+        curTrack->event.data[1] = data & 0x80 ? (*curTrack->pos++ & 0x7f) : prevVolume[curTrack->event.channel];
+        if (curTrack->event.data[1] > 0)
+            prevVolume[curTrack->event.channel] = curTrack->event.data[1];
 
         eventNoteOn();
         break;

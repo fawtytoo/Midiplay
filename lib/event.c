@@ -107,7 +107,7 @@ typedef struct
 {
     CHANNEL     *channel;
     int         note;
-    int         volume; // midi specific
+    int         volume;
     int         playing; // bit field
     float       width, sample;
 } VOICE;
@@ -167,16 +167,13 @@ void eventNoteOn()
     for (voice = 0; voice < VOICES; voice++)
         if (midVoice[voice].playing == 0)
         {
-            if (volume < 128)
-                channel->volume = volume;
-
             midVoice[voice].channel = channel;
 
             midVoice[voice].width = (float)musicSamplerate / frequencyTable[note];
             midVoice[voice].sample = midVoice[voice].width;
 
             midVoice[voice].note = note;
-            midVoice[voice].volume = 127;
+            midVoice[voice].volume = volume;
             midVoice[voice].playing = NOTE_PLAY | channel->sustain;
 
             break;

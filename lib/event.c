@@ -158,12 +158,6 @@ void eventNoteOn()
     int         volume = eventData->data[1];
     int         voice;
 
-    if (volume == 0)
-    {
-        eventNoteOff();
-        return;
-    }
-
     for (voice = 0; voice < VOICES; voice++)
         if (midVoice[voice].playing == 0)
         {

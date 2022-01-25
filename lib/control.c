@@ -162,6 +162,8 @@ int getMusEvent(int *time)
 {
     BYTE        data, last;
 
+    curTrack->midi.doEvent = NULL;
+
     data = *curTrack->pos++;
     curTrack->event.channel = data & 0x0f;
     last = data & 0x80;
@@ -172,55 +174,53 @@ int getMusEvent(int *time)
     {
       case 0x00: // release note
         curTrack->event.data[0] = (*curTrack->pos++ & 0x7f);
-        eventNoteOff();
+        curTrack->midi.doEvent = eventNoteOff;
         break;
 
       case 0x10: // play note
         data = *curTrack->pos++;
         curTrack->event.data[0] = (data & 0x7f);
         curTrack->event.data[1] = data & 0x80 ? (*curTrack->pos++ & 0x7f) : prevVolume[curTrack->event.channel];
-        if (curTrack->event.data[1] > 0)
-            prevVolume[curTrack->event.channel] = curTrack->event.data[1];
-
-        eventNoteOn();
+        // should the volume be saved if the value is 0?
+        prevVolume[curTrack->event.channel] = curTrack->event.data[1];
+        curTrack->midi.doEvent = curTrack->event.data[1] == 0 ? eventNoteOff : eventNoteOn;
         break;
 
       case 0x20: // pitch wheel (adjusted to 14 bit value)
         curTrack->event.data[0] = (*curTrack->pos & 0x1) << 6;
         curTrack->event.data[1] = *curTrack->pos++ >> 1;
-        eventPitchWheel();
+        curTrack->midi.doEvent = eventPitchWheel;
         break;
 
       case 0x30: // system event
         curTrack->event.data[0] = controllerMap[0][*curTrack->pos++];
-        eventMessage();
+        curTrack->midi.doEvent = eventMessage;
         break;
 
       case 0x40: // change controller
         curTrack->event.data[0] = controllerMap[0][*curTrack->pos++];
         curTrack->event.data[1] = *curTrack->pos++;
-        eventMessage();
+        curTrack->midi.doEvent = eventMessage;
         break;
 
       case 0x50: // end of measure?
         break;
 
       case 0x60: // score end
-        if (musicLooping)
-            initTracks();
-        else
-            endOfTrack();
-
-        return 1 - musicLooping;
+        curTrack->midi.doEvent = musicLooping ? initTracks : endOfTrack;
+        last = 1 - musicLooping;
+        break;
 
       case 0x70:
         // requires one data byte but is unused
         curTrack->event.data[0] = *curTrack->pos++;
         break;
-
     }
 
-    if (last)
+    if (curTrack->midi.doEvent)
+        curTrack->midi.doEvent();
+
+    if (last & 0x80)
         *time = getLength();
 
     return last;
@@ -252,7 +252,7 @@ void getMidEvent()
       case 0x90:
         curTrack->event.data[0] = *curTrack->pos++;
         curTrack->event.data[1] = *curTrack->pos++;
-        curTrack->midi.doEvent = eventNoteOn;
+        curTrack->midi.doEvent = curTrack->event.data[1] == 0 ? eventNoteOff : eventNoteOn;
         break;
 
       case 0xa0:

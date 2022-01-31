@@ -32,8 +32,6 @@ int         musicSamplerate;
 int         musicLooping;
 int         musicPlaying = 0;
 
-int         musicVolume = VOLUME;
-
 void Midiplay_Init(int samplerate)
 {
     musicSamplerate = samplerate;
@@ -126,7 +124,7 @@ void Midiplay_SetVolume(int volume)
     else if (volume > 127)
         volume = 127;
 
-    musicVolume = VOLUME * volume / 127;
+    updateVolume(volume);
 }
 
 int Midiplay_IsPlaying()

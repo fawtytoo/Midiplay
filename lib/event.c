@@ -118,15 +118,28 @@ VOICE       midVoice[VOICES];
 
 EVENT       *eventData;
 
+int         midVolume = VOLUME;
+
 void voiceVolume(VOICE *voice)
 {
     float       volume;
 
-    volume = musicVolume * volumeTable[voice->channel->volume];
+    volume = midVolume * volumeTable[voice->channel->volume];
     volume *= volumeTable[voice->volume];
 
     voice->stereo[0] = volume * panTable[voice->channel->pan][0];
     voice->stereo[1] = volume * panTable[voice->channel->pan][1];
+}
+
+void updateVolume(int volume)
+{
+    int         voice;
+
+    midVolume = VOLUME * volume / 127;
+
+    for (voice = 0; voice < VOICES; voice++)
+        if (midVoice[voice].playing)
+            voiceVolume(&midVoice[voice]);
 }
 
 void resetVoices()

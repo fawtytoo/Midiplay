@@ -211,23 +211,8 @@ void eventPitchWheel()
         if (midVoice[voice].playing == 0 || midVoice[voice].channel != channel)
             continue;
 
-        note = midVoice[voice].note;
-        if (bend < 64)
-        {
-            note -= 2;
-        }
-        else if (bend < 128)
-        {
-            note -= 1;
-            bend -= 64;
-        }
-        else if (bend > 191)
-        {
-            note += 1;
-            bend -= 192;
-        }
-        else
-            bend -= 128;
+        note = midVoice[voice].note + (bend >> 6) - 2;
+        bend &= 63;
 
         diff = frequencyTable[note + 1] - frequencyTable[note];
 

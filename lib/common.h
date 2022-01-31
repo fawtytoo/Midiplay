@@ -37,7 +37,7 @@ void trackMusEvents(void);
 void trackMidEvents(void);
 void updateTime(void);
 
-void generateSamples(short *, int);
+void generateSample(short *);
 
 #endif
 

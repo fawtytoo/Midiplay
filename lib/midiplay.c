@@ -79,10 +79,13 @@ int Midiplay_Load(void *data, int size, int looping)
         if (size < sizeof(HDR_MID))
             return 0;
 
+        beatTicks = __builtin_bswap16(hdrMid->ppqn);
+        if (beatTicks < 0)
+            return 0; // no support for SMPTE format yet
+
         if (loadMidTracks(__builtin_bswap16(hdrMid->ntracks), data + sizeof(HDR_MID), size - sizeof(HDR_MID)) == 1)
             return 0; // track header failed
 
-        beatTicks = __builtin_bswap16(hdrMid->ppqn);
         musicEvents = trackMidEvents;
     }
     else
@@ -141,29 +144,21 @@ void Midiplay_Output(short *buffer, int length)
 {
     int         samples;
 
-    for (samples = 0; samples < length; samples++)
-        *(buffer + samples) = 0;
-
     length /= 2; // 1 sample = left + right
 
     while (length)
     {
-        // fill with silence if we're not playing or not initialised
-        if (musicPlaying == 0 || musicInit < 2)
-        {
-            length--;
-            continue;
-        }
-
         if (playSamples < 1.0f)
         {
-            updateTime();
-            musicEvents();
+            if (musicPlaying)
+            {
+                updateTime();
+                musicEvents();
+                musicClock++;
+            }
             playSamples += tickSamples;
-            musicClock++;
         }
 
-        // how many samples should we play?
         samples = (int)playSamples;
         if (samples > length)
             samples = length;
@@ -171,8 +166,14 @@ void Midiplay_Output(short *buffer, int length)
         playSamples -= samples;
         length -= samples;
 
-        generateSamples(buffer, samples);
-        buffer += samples * 2;
+        while (samples--)
+        {
+            *buffer = *(buffer + 1) = 0;
+            if (musicPlaying)
+                generateSample(buffer);
+
+            buffer += 2;
+        }
     }
 }
 

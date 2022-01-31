@@ -108,6 +108,7 @@ typedef struct
     CHANNEL     *channel;
     int         note;
     int         volume;
+    short       stereo[2];
     int         playing; // bit field
     float       width, sample;
 } VOICE;
@@ -116,6 +117,17 @@ CHANNEL     midChannel[16];
 VOICE       midVoice[VOICES];
 
 EVENT       *eventData;
+
+void voiceVolume(VOICE *voice)
+{
+    float       volume;
+
+    volume = musicVolume * volumeTable[voice->channel->volume];
+    volume *= volumeTable[voice->volume];
+
+    voice->stereo[0] = volume * panTable[voice->channel->pan][0];
+    voice->stereo[1] = volume * panTable[voice->channel->pan][1];
+}
 
 void resetVoices()
 {
@@ -168,6 +180,7 @@ void eventNoteOn()
 
             midVoice[voice].note = note;
             midVoice[voice].volume = volume;
+            voiceVolume(&midVoice[voice]);
             midVoice[voice].playing = NOTE_PLAY | channel->sustain;
 
             break;
@@ -236,17 +249,22 @@ void eventAftertouch()
         if (midVoice[voice].channel == channel)
             if (midVoice[voice].note == note)
                 if (midVoice[voice].playing)
+                {
                     midVoice[voice].volume = volume;
+                    voiceVolume(&midVoice[voice]);
+                }
 }
 
-void eventSustain(int sustain)
+void eventSustain()
 {
     CHANNEL     *channel = &midChannel[eventData->channel];
+    int         sustain = eventData->data[1] >> 6;
     int         voice;
 
-    channel->sustain = sustain << 1;
+    // sustain: 0=off, 2=on
+    channel->sustain = ((sustain >> 1) | (sustain & 1)) << 1;
 
-    if (sustain == 1)
+    if (sustain != 0)
         return;
 
     for (voice = 0; voice < VOICES; voice++)
@@ -255,20 +273,50 @@ void eventSustain(int sustain)
                 midVoice[voice].playing &= NOTE_PLAY;
 }
 
+void eventChannel()
+{
+    CHANNEL     *channel = &midChannel[eventData->channel];
+    int         value = eventData->data[1];
+    int         voice;
+
+    channel->volume = value & 0x7f;
+
+    for (voice = 0; voice < VOICES; voice++)
+    {
+        if (midVoice[voice].channel == channel)
+            if (midVoice[voice].playing)
+                voiceVolume(&midVoice[voice]);
+    }
+}
+
+void eventPan()
+{
+    CHANNEL     *channel = &midChannel[eventData->channel];
+    int         pan = eventData->data[1] & 0x7f;
+    int         voice;
+
+    channel->pan = pan;
+
+    for (voice = 0; voice < VOICES; voice++)
+    {
+        if (midVoice[voice].channel == channel)
+            if (midVoice[voice].playing)
+                voiceVolume(&midVoice[voice]);
+    }
+}
+
 void eventMessage()
 {
-    int         channel = eventData->channel;
     int         message = eventData->data[0];
-    int         value = eventData->data[1];
 
     switch (message)
     {
       case MM_VOLUME:
-        midChannel[channel].volume = value & 0x7f;
+        eventChannel();
         break;
 
       case MM_PAN:
-        midChannel[channel].pan = value & 0x7f;
+        eventPan();
         break;
 
       case MM_NOTEOFF:
@@ -279,8 +327,9 @@ void eventMessage()
         resetControls();
         break;
 
+      // sustain does not work well as there is no voice volume fade
       case MM_SUSTAIN:
-        eventSustain(value >> 6);
+        //eventSustain();
         break;
 
       case MM_INSTR:
@@ -295,40 +344,29 @@ void eventMessage()
     }
 }
 
-void generateSamples(short *buffer, int samples)
+void generateSample(short *buffer)
 {
-    int         voice, count;
-    float       volume;
-    short       *out, left, right;
+    int         voice;
+    short       *left = buffer, *right = buffer + 1;
 
     for (voice = 0; voice < VOICES; voice++)
     {
         if (midVoice[voice].playing == 0)
             continue;
 
-        volume = musicVolume * volumeTable[midVoice[voice].channel->volume];
-        volume *= volumeTable[midVoice[voice].volume];
-        left = volume * panTable[midVoice[voice].channel->pan][0];
-        right = volume * panTable[midVoice[voice].channel->pan][1];
-
-        out = buffer;
-
-        for (count = 0; count < samples; count++)
+        if (midVoice[voice].sample < midVoice[voice].width / 2.0f)
         {
-            if (midVoice[voice].sample < midVoice[voice].width / 2.0f)
-            {
-                *out++ += left;
-                *out++ += right;
-            }
-            else
-            {
-                *out++ -= left;
-                *out++ -= right;
-            }
-
-            if (--midVoice[voice].sample < 1.0f)
-                midVoice[voice].sample += midVoice[voice].width;
+            *left += midVoice[voice].stereo[0];
+            *right += midVoice[voice].stereo[1];
         }
+        else
+        {
+            *left -= midVoice[voice].stereo[0];
+            *right -= midVoice[voice].stereo[1];
+        }
+
+        if (--midVoice[voice].sample < 1.0f)
+            midVoice[voice].sample += midVoice[voice].width;
     }
 }
 

@@ -10,15 +10,16 @@ The inspiration for this project came from the original DOOM source code.
 
 The DOOM source code did not come with the ability to play music. DOOM music is in the MUS form; a derivative of MIDI. It has the same basic event/delta-time structure as MIDI.
 
-This project can play both MUS and MIDI files due to their similar structure. MIDI type 0 & 1 files are supported; type 2 is unknown due to lack of suitable files to test with.
+This project can play both MUS and MIDI files due to their similar structure. MIDI type 0 & 1 files are supported; type 2 is unknown due to lack of suitable files to test with. Similarly, Midiplay does not handle the SMPTE format.
 
 ### Code
 The project has been created as a stand alone library. It has an external main.c for demonstration purposes, so can be used as a functional player from the command line. Alternatively, it can be fully integrated into any other project.
 
 Playback is done using a square wave, because this is the simplest wave to create.
 
-- 16 Channels (instruments not supported).
+- 16 Channels (instruments not currently supported).
 - 24 Voices (minimum for General MIDI Level 1 Spec).
+- Full stereo sound
 
 ### Focus
 The project is meant for demonstration purposes only, but is functional as a player in itself. However, its focus is on event parsing and timing accuracy, rather than dealing with all possible events and instrument sounds.
@@ -30,8 +31,9 @@ The library handles only a few basic events, but enough that would satisfy most 
 - Note On
 - Note Off
 - Pitch Wheel (fixed 2 semitones up/down)
-- After Touch
-- Sustain
+- After Touch (key pressure)
+- After Touch (channel pressure)
+- Sustain (currently disabled)
 - Tempo (MIDI only)
 - Channel Volume
 - Panning

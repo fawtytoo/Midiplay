@@ -274,7 +274,7 @@ void getMidEvent()
         break;
 
       case 0xd0:
-        curTrack->event.data[0] = MM_VOLUME;
+        curTrack->event.data[0] = MM_AFTERTOUCH;
         curTrack->event.data[1] = *curTrack->pos++;
         curTrack->midi.doEvent = eventMessage;
         break;

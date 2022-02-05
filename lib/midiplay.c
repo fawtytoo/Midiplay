@@ -34,7 +34,7 @@ int         musicPlaying = 0;
 
 void Midiplay_Init(int samplerate)
 {
-    musicSamplerate = samplerate;
+    musicSamplerate = rateAcc = samplerate;
 
     musicInit = 1;
 }
@@ -166,10 +166,7 @@ void Midiplay_Output(short *buffer, int length)
 
         while (samples--)
         {
-            *buffer = *(buffer + 1) = 0;
-            if (musicPlaying)
-                generateSample(buffer);
-
+            generateSample(buffer);
             buffer += 2;
         }
     }

@@ -8,36 +8,25 @@
 #define NOTE_PLAY       1
 #define NOTE_SUSTAIN    2
 
-float       frequencyTable[128] =
+// all frequencies are 16.16
+UINT        frequencyTable[128] =
 {
-    8.175799f, 8.661958f, 9.177023f, 9.722718f, 10.300862f, 10.913381f, 11.562326f, 12.249859f,
-    12.978270f, 13.750000f, 14.567619f, 15.433851f, 16.351598f, 17.323916f, 18.354046f, 19.445436f,
-    20.601725f, 21.826762f, 23.124651f, 24.499717f, 25.956541f, 27.500000f, 29.135233f, 30.867708f,
-    32.703196f, 34.647827f, 36.708098f, 38.890873f, 41.203442f, 43.653531f, 46.249303f, 48.999427f,
-    51.913090f, 55.000000f, 58.270467f, 61.735416f, 65.406391f, 69.295654f, 73.416196f, 77.781746f,
-    82.406885f, 87.307063f, 92.498606f, 97.998854f, 103.826180f, 110.000000f, 116.540944f, 123.470822f,
-    130.812783f, 138.591319f, 146.832380f, 155.563492f, 164.813783f, 174.614111f, 184.997211f, 195.997723f,
-    207.652343f, 220.000000f, 233.081878f, 246.941654f, 261.625565f, 277.182627f, 293.664772f, 311.126984f,
-    329.627559f, 349.228229f, 369.994423f, 391.995435f, 415.304697f, 440.000000f, 466.163762f, 493.883303f,
-    523.251131f, 554.365266f, 587.329532f, 622.253967f, 659.255105f, 698.456472f, 739.988845f, 783.990861f,
-    830.609407f, 880.000000f, 932.327549f, 987.766575f, 1046.502261f, 1108.730554f, 1174.659039f, 1244.507935f,
-    1318.510264f, 1396.912887f, 1479.977691f, 1567.981787f, 1661.218745f, 1760.000000f, 1864.654943f, 1975.533314f,
-    2093.004522f, 2217.460926f, 2349.318273f, 2489.015870f, 2637.020310f, 2793.826005f, 2959.955382f, 3135.963315f,
-    3322.437764f, 3520.000000f, 3729.309887f, 3951.066628f, 4186.009045f, 4434.921851f, 4698.636546f, 4978.031740f,
-    5274.040620f, 5587.652011f, 5919.910763f, 6271.926630f, 6644.875527f, 7040.000000f, 7458.621006f, 7902.131949f,
-    8372.018090f, 8869.845168f, 9397.271538f, 9956.063479f, 10548.082983f, 11175.302175f, 11839.821527f, 12543.855333f
+    0x00082d01, 0x0008a976, 0x00092d51, 0x0009b904, 0x000a4d05, 0x000ae9d3, 0x000b8ff4, 0x000c3ff6, 0x000cfa6f, 0x000dc000, 0x000e914f, 0x000f6f10, 0x00105a02, 0x001152ec, 0x00125aa2, 0x00137208,
+    0x00149a0a, 0x0015d3a6, 0x00171fe9, 0x00187fed, 0x0019f4df, 0x001b8000, 0x001d229e, 0x001ede22, 0x0020b404, 0x0022a5d7, 0x0024b545, 0x0026e410, 0x00293414, 0x002ba74d, 0x002e3fd2, 0x0030ffda,
+    0x0033e9c0, 0x00370000, 0x003a453d, 0x003dbc44, 0x00416809, 0x00454baf, 0x00496a8b, 0x004dc820, 0x00526829, 0x00574e9b, 0x005c7fa4, 0x0061ffb4, 0x0067d380, 0x006e0000, 0x00748a7b, 0x007b7887,
+    0x0082d012, 0x008a9760, 0x0092d516, 0x009b9041, 0x00a4d054, 0x00ae9d36, 0x00b8ff49, 0x00c3ff6a, 0x00cfa6ff, 0x00dc0000, 0x00e914f5, 0x00f6f110, 0x0105a025, 0x01152ec0, 0x0125aa2e, 0x01372082,
+    0x0149a0a7, 0x015d3a6d, 0x0171fe92, 0x0187fed4, 0x019f4e00, 0x01b80000, 0x01d229ec, 0x01ede220, 0x020b404a, 0x022a5d82, 0x024b545c, 0x026e4104, 0x0293414e, 0x02ba74db, 0x02e3fd24, 0x030ffda9,
+    0x033e9c02, 0x03700000, 0x03a453da, 0x03dbc43e, 0x04168094, 0x0454bb05, 0x0496a8b6, 0x04dc8208, 0x052682a0, 0x0574e9b2, 0x05c7fa49, 0x061ffb56, 0x067d37ff, 0x06e00000, 0x0748a7aa, 0x07b78887,
+    0x082d0128, 0x08a975ff, 0x092d517a, 0x09b90410, 0x0a4d0533, 0x0ae9d375, 0x0b8ff493, 0x0c3ff69b, 0x0cfa7011, 0x0dc00000, 0x0e914f54, 0x0f6f110e, 0x105a0250, 0x1152ebfe, 0x125aa2f4, 0x13720820,
+    0x149a0a66, 0x15d3a6ea, 0x171fe927, 0x187fed37, 0x19f4e022, 0x1b800000, 0x1d229efa, 0x1ede21c7, 0x20b404a1, 0x22a5d85c, 0x24b54583, 0x26e41040, 0x2934153e, 0x2ba74d5b, 0x2e3fd24f, 0x30ffdaf7
 };
 
-float       pitchBendTable[64] =
+UINT        pitchBendTable[64] =
 {
-    0.000000f, 0.010889f, 0.021897f, 0.033025f, 0.044274f, 0.055645f, 0.067140f, 0.078761f,
-    0.090508f, 0.102383f, 0.114387f, 0.126522f, 0.138789f, 0.151189f, 0.163725f, 0.176397f,
-    0.189207f, 0.202157f, 0.215247f, 0.228481f, 0.241858f, 0.255381f, 0.269051f, 0.282870f,
-    0.296840f, 0.310961f, 0.325237f, 0.339668f, 0.354256f, 0.369002f, 0.383910f, 0.398980f,
-    0.414214f, 0.429613f, 0.445181f, 0.460918f, 0.476826f, 0.492908f, 0.509164f, 0.525598f,
-    0.542211f, 0.559004f, 0.575981f, 0.593142f, 0.610490f, 0.628027f, 0.645755f, 0.663677f,
-    0.681793f, 0.700106f, 0.718619f, 0.737334f, 0.756252f, 0.775376f, 0.794709f, 0.814252f,
-    0.834008f, 0.853979f, 0.874168f, 0.894576f, 0.915207f, 0.936062f, 0.957144f, 0.978456f
+    0x0000, 0x02c9, 0x059b, 0x0874, 0x0b55, 0x0e3e, 0x1130, 0x1429, 0x172b, 0x1a35, 0x1d48, 0x2063, 0x2387, 0x26b4, 0x29e9, 0x2d28,
+    0x306f, 0x33c0, 0x371a, 0x3a7d, 0x3dea, 0x4160, 0x44e0, 0x486a, 0x4bfd, 0x4f9b, 0x5342, 0x56f4, 0x5ab0, 0x5e76, 0x6247, 0x6623,
+    0x6a09, 0x6dfb, 0x71f7, 0x75fe, 0x7a11, 0x7e2f, 0x8258, 0x868d, 0x8ace, 0x8f1a, 0x9373, 0x97d8, 0x9c49, 0xa0c6, 0xa550, 0xa9e6,
+    0xae89, 0xb33a, 0xb7f7, 0xbcc1, 0xc199, 0xc67f, 0xcb72, 0xd072, 0xd581, 0xda9e, 0xdfc9, 0xe502, 0xea4a, 0xefa1, 0xf507, 0xfa7c
 };
 
 float       volumeTable[128] =
@@ -101,6 +90,7 @@ typedef struct
     int         volume;
     int         pan;
     int         sustain;
+    int         bend;
 } CHANNEL;
 
 typedef struct
@@ -108,9 +98,9 @@ typedef struct
     CHANNEL     *channel;
     int         note;
     int         volume;
+    UINT        phase, step;
     short       stereo[2];
     int         playing; // bit field
-    float       width, sample;
 } VOICE;
 
 CHANNEL     midChannel[16];
@@ -119,6 +109,8 @@ VOICE       midVoice[VOICES];
 EVENT       *eventData;
 
 int         midVolume = VOLUME;
+
+int         rateAcc;
 
 void voiceVolume(VOICE *voice)
 {
@@ -159,6 +151,7 @@ void resetControls()
         midChannel[channel].volume = 100;
         midChannel[channel].pan = 64;
         midChannel[channel].sustain = 0;
+        midChannel[channel].bend = 128;
     }
 }
 
@@ -170,10 +163,24 @@ void eventNoteOff()
     int         voice;
 
     for (voice = 0; voice < VOICES; voice++)
-        if (midVoice[voice].channel == channel)
-            if (midVoice[voice].note == note)
-                if (midVoice[voice].playing)
+        if (midVoice[voice].playing)
+            if (midVoice[voice].channel == channel)
+                if (midVoice[voice].note == note)
                     midVoice[voice].playing &= NOTE_SUSTAIN;
+}
+
+void frequencyStep(VOICE *voice)
+{
+    int         note = voice->note;
+    int         bend = voice->channel->bend;
+    UINT        diff;
+
+    note += (bend >> 6) - 2;
+    bend &= 63;
+
+    diff = (frequencyTable[note + 1] - frequencyTable[note]) >> 16;
+
+    voice->step = frequencyTable[note] + ((diff * pitchBendTable[bend]));
 }
 
 void eventNoteOn()
@@ -187,13 +194,13 @@ void eventNoteOn()
         if (midVoice[voice].playing == 0)
         {
             midVoice[voice].channel = channel;
-
-            midVoice[voice].width = (float)musicSamplerate / frequencyTable[note];
-            midVoice[voice].sample = midVoice[voice].width;
-
             midVoice[voice].note = note;
             midVoice[voice].volume = volume;
             voiceVolume(&midVoice[voice]);
+
+            frequencyStep(&midVoice[voice]);
+            midVoice[voice].phase = 0;
+
             midVoice[voice].playing = NOTE_PLAY | channel->sustain;
 
             break;
@@ -206,34 +213,22 @@ void eventMuteNotes()
     int         voice;
 
     for (voice = 0; voice < VOICES; voice++)
-        if (midVoice[voice].channel == channel)
-            if (midVoice[voice].playing)
+        if (midVoice[voice].playing)
+            if (midVoice[voice].channel == channel)
                 midVoice[voice].playing &= NOTE_SUSTAIN;
 }
 
 void eventPitchWheel()
 {
     CHANNEL     *channel = &midChannel[eventData->channel];
-    int         bend = ((eventData->data[0] & 0x7f) | (eventData->data[1] << 7)) >> 6; // 8 bit values
     int         voice;
-    int         note;
-    float       diff;
+
+    channel->bend = ((eventData->data[0] & 0x7f) | (eventData->data[1] << 7)) >> 6; // 8 bit values
 
     for (voice = 0; voice < VOICES; voice++)
-    {
-        if (midVoice[voice].playing == 0 || midVoice[voice].channel != channel)
-            continue;
-
-        note = midVoice[voice].note + (bend >> 6) - 2;
-        bend &= 63;
-
-        diff = frequencyTable[note + 1] - frequencyTable[note];
-
-        midVoice[voice].width = (float)musicSamplerate / (frequencyTable[note] + diff * pitchBendTable[bend]);
-
-        if (midVoice[voice].sample > midVoice[voice].width)
-            midVoice[voice].sample = midVoice[voice].width;
-    }
+        if (midVoice[voice].playing)
+            if (midVoice[voice].channel == channel)
+                frequencyStep(&midVoice[voice]);
 }
 
 void eventAftertouch()
@@ -244,9 +239,9 @@ void eventAftertouch()
     int         voice;
 
     for (voice = 0; voice < VOICES; voice++)
-        if (midVoice[voice].channel == channel)
-            if (midVoice[voice].note == note)
-                if (midVoice[voice].playing)
+        if (midVoice[voice].playing)
+            if (midVoice[voice].channel == channel)
+                if (midVoice[voice].note == note)
                 {
                     midVoice[voice].volume = volume;
                     voiceVolume(&midVoice[voice]);
@@ -266,25 +261,23 @@ void eventSustain()
         return;
 
     for (voice = 0; voice < VOICES; voice++)
-        if (midVoice[voice].channel == channel)
-            if (midVoice[voice].playing)
+        if (midVoice[voice].playing)
+            if (midVoice[voice].channel == channel)
                 midVoice[voice].playing &= NOTE_PLAY;
 }
 
 void eventChannel()
 {
     CHANNEL     *channel = &midChannel[eventData->channel];
-    int         value = eventData->data[1];
+    int         volume = eventData->data[1];
     int         voice;
 
-    channel->volume = value & 0x7f;
+    channel->volume = volume & 0x7f;
 
     for (voice = 0; voice < VOICES; voice++)
-    {
-        if (midVoice[voice].channel == channel)
-            if (midVoice[voice].playing)
+        if (midVoice[voice].playing)
+            if (midVoice[voice].channel == channel)
                 voiceVolume(&midVoice[voice]);
-    }
 }
 
 void eventPan()
@@ -296,11 +289,24 @@ void eventPan()
     channel->pan = pan;
 
     for (voice = 0; voice < VOICES; voice++)
-    {
-        if (midVoice[voice].channel == channel)
-            if (midVoice[voice].playing)
+        if (midVoice[voice].playing)
+            if (midVoice[voice].channel == channel)
                 voiceVolume(&midVoice[voice]);
-    }
+}
+
+void eventChannelAftertouch()
+{
+    CHANNEL     *channel = &midChannel[eventData->channel];
+    int         volume = eventData->data[1];
+    int         voice;
+
+    for (voice = 0; voice < VOICES; voice++)
+        if (midVoice[voice].playing)
+            if (midVoice[voice].channel == channel)
+            {
+                midVoice[voice].volume = volume;
+                voiceVolume(&midVoice[voice]);
+            }
 }
 
 void eventMessage()
@@ -325,9 +331,12 @@ void eventMessage()
         resetControls();
         break;
 
-      // sustain does not work well as there is no voice volume fade
-      case MM_SUSTAIN:
+      case MM_SUSTAIN: // FIXME
         //eventSustain();
+        break;
+
+      case MM_AFTERTOUCH:
+        eventChannelAftertouch();
         break;
 
       case MM_INSTR:
@@ -345,27 +354,31 @@ void eventMessage()
 void generateSample(short *buffer)
 {
     int         voice;
-    short       *left = buffer, *right = buffer + 1;
+    short       left = 0, right = 0;
 
-    for (voice = 0; voice < VOICES; voice++)
-    {
-        if (midVoice[voice].playing == 0)
-            continue;
-
-        if (midVoice[voice].sample < midVoice[voice].width / 2.0f)
+    if (musicPlaying)
+        while (rateAcc >= musicSamplerate)
         {
-            *left += midVoice[voice].stereo[0];
-            *right += midVoice[voice].stereo[1];
-        }
-        else
-        {
-            *left -= midVoice[voice].stereo[0];
-            *right -= midVoice[voice].stereo[1];
+            left = right = 0;
+
+            for (voice = 0; voice < VOICES; voice++)
+            {
+                if (midVoice[voice].playing == 0)
+                    continue;
+
+                left += midVoice[voice].stereo[0] * (((midVoice[voice].phase >> 31) << 1) - 1);
+                right += midVoice[voice].stereo[1] * (((midVoice[voice].phase >> 31) << 1) - 1);
+
+                midVoice[voice].phase += midVoice[voice].step;
+            }
+
+            rateAcc -= musicSamplerate;
         }
 
-        if (--midVoice[voice].sample < 1.0f)
-            midVoice[voice].sample += midVoice[voice].width;
-    }
+    *buffer++ = left;
+    *buffer = right;
+
+    rateAcc += 65536;
 }
 
 // midiplay

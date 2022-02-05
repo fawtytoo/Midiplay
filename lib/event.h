@@ -25,7 +25,8 @@ enum
     MM_SUSTAIN,
     MM_REG_LSB,
     MM_REG_MSB,
-    MM_CTRLOFF
+    MM_CTRLOFF,
+    MM_AFTERTOUCH
 };
 
 void resetControls(void);

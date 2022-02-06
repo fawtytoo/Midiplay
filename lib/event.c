@@ -110,7 +110,7 @@ EVENT       *eventData;
 
 int         midVolume = VOLUME;
 
-int         rateAcc;
+int         rateAcc = 65536;
 
 void voiceVolume(VOICE *voice)
 {
@@ -351,29 +351,36 @@ void eventMessage()
     }
 }
 
+short genPhase(VOICE *voice)
+{
+    return ((voice->phase >> 31) << 1) - 1;
+}
+
 void generateSample(short *buffer)
 {
     int         voice;
     short       left = 0, right = 0;
+    short       phase;
+    int         rate;
 
     if (musicPlaying)
-        while (rateAcc >= musicSamplerate)
+    {
+        rate = rateAcc / musicSamplerate;
+        rateAcc -= musicSamplerate * rate;
+
+        for (voice = 0; voice < VOICES; voice++)
         {
-            left = right = 0;
+            if (midVoice[voice].playing == 0)
+                continue;
 
-            for (voice = 0; voice < VOICES; voice++)
-            {
-                if (midVoice[voice].playing == 0)
-                    continue;
+            phase = genPhase(&midVoice[voice]);
 
-                left += midVoice[voice].stereo[0] * (((midVoice[voice].phase >> 31) << 1) - 1);
-                right += midVoice[voice].stereo[1] * (((midVoice[voice].phase >> 31) << 1) - 1);
+            left += midVoice[voice].stereo[0] * phase;
+            right += midVoice[voice].stereo[1] * phase;
 
-                midVoice[voice].phase += midVoice[voice].step;
-            }
-
-            rateAcc -= musicSamplerate;
+            midVoice[voice].phase += midVoice[voice].step * rate;
         }
+    }
 
     *buffer++ = left;
     *buffer = right;

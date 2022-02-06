@@ -18,7 +18,7 @@ typedef unsigned int    UINT;
 
 typedef void(*function)(void);
 
-extern int      musicSamplerate, rateAcc;
+extern int      musicSamplerate;
 extern int      musicPlaying, musicLooping;
 extern int      musicVolume;
 

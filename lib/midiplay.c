@@ -34,7 +34,7 @@ int         musicPlaying = 0;
 
 void Midiplay_Init(int samplerate)
 {
-    musicSamplerate = rateAcc = samplerate;
+    musicSamplerate = samplerate;
 
     musicInit = 1;
 }

@@ -38,6 +38,8 @@ The library handles only a few basic events, but enough that would satisfy most 
 - Channel Volume
 - Panning
 - All Notes Off
+- All Sounds Off
+- Expression
 
 ## Sources
 - [MUS format](https://moddingwiki.shikadi.net/wiki/MUS_Format)

@@ -29,60 +29,40 @@ UINT        pitchBendTable[64] =
     0xae89, 0xb33a, 0xb7f7, 0xbcc1, 0xc199, 0xc67f, 0xcb72, 0xd072, 0xd581, 0xda9e, 0xdfc9, 0xe502, 0xea4a, 0xefa1, 0xf507, 0xfa7c
 };
 
-float       volumeTable[128] =
+UINT        volumeTable[128] =
 {
-    0.000000f, 0.007874f, 0.023622f, 0.039370f, 0.047244f, 0.062992f, 0.078740f, 0.086614f,
-    0.102362f, 0.110236f, 0.125984f, 0.133858f, 0.149606f, 0.157480f, 0.173228f, 0.181102f,
-    0.196850f, 0.204724f, 0.212598f, 0.228346f, 0.236220f, 0.251969f, 0.259843f, 0.267717f,
-    0.283465f, 0.291339f, 0.307087f, 0.322835f, 0.338583f, 0.354331f, 0.370079f, 0.385827f,
-    0.393701f, 0.409449f, 0.425197f, 0.433071f, 0.448819f, 0.464567f, 0.472441f, 0.480315f,
-    0.496063f, 0.503937f, 0.519685f, 0.527559f, 0.535433f, 0.543307f, 0.559055f, 0.566929f,
-    0.574803f, 0.582677f, 0.590551f, 0.598425f, 0.606299f, 0.622047f, 0.629921f, 0.637795f,
-    0.645669f, 0.653543f, 0.661417f, 0.661417f, 0.669291f, 0.677165f, 0.685039f, 0.692913f,
-    0.700787f, 0.708661f, 0.716535f, 0.724409f, 0.724409f, 0.732283f, 0.740157f, 0.748031f,
-    0.755906f, 0.755906f, 0.763780f, 0.771654f, 0.779528f, 0.779528f, 0.787402f, 0.795276f,
-    0.795276f, 0.803150f, 0.811024f, 0.811024f, 0.818898f, 0.826772f, 0.826772f, 0.834646f,
-    0.842520f, 0.842520f, 0.850394f, 0.858268f, 0.858268f, 0.866142f, 0.866142f, 0.874016f,
-    0.881890f, 0.881890f, 0.889764f, 0.889764f, 0.897638f, 0.897638f, 0.905512f, 0.905512f,
-    0.913386f, 0.921260f, 0.921260f, 0.929134f, 0.929134f, 0.937008f, 0.937008f, 0.944882f,
-    0.944882f, 0.952756f, 0.952756f, 0.960630f, 0.960630f, 0.968504f, 0.968504f, 0.968504f,
-    0.976378f, 0.976378f, 0.984252f, 0.984252f, 0.992126f, 0.992126f, 1.000000f, 1.000000f
+    0x000, 0x001, 0x002, 0x004, 0x005, 0x007, 0x008, 0x009, 0x00b, 0x00c, 0x00e, 0x00f, 0x011, 0x012, 0x014, 0x015,
+    0x017, 0x018, 0x01a, 0x01b, 0x01d, 0x01f, 0x020, 0x022, 0x023, 0x025, 0x027, 0x028, 0x02a, 0x02b, 0x02d, 0x02f,
+    0x030, 0x032, 0x034, 0x035, 0x037, 0x039, 0x03b, 0x03c, 0x03e, 0x040, 0x041, 0x043, 0x045, 0x047, 0x049, 0x04a,
+    0x04c, 0x04e, 0x050, 0x052, 0x054, 0x055, 0x057, 0x059, 0x05b, 0x05d, 0x05f, 0x061, 0x063, 0x065, 0x067, 0x069,
+    0x06b, 0x06d, 0x06f, 0x071, 0x073, 0x075, 0x077, 0x079, 0x07b, 0x07d, 0x07f, 0x081, 0x083, 0x085, 0x087, 0x089,
+    0x08c, 0x08e, 0x090, 0x092, 0x094, 0x097, 0x099, 0x09b, 0x09d, 0x0a0, 0x0a2, 0x0a4, 0x0a6, 0x0a9, 0x0ab, 0x0ad,
+    0x0b0, 0x0b2, 0x0b5, 0x0b7, 0x0b9, 0x0bc, 0x0be, 0x0c1, 0x0c3, 0x0c6, 0x0c8, 0x0cb, 0x0cd, 0x0d0, 0x0d2, 0x0d5,
+    0x0d7, 0x0da, 0x0dc, 0x0df, 0x0e2, 0x0e4, 0x0e7, 0x0ea, 0x0ec, 0x0ef, 0x0f2, 0x0f4, 0x0f7, 0x0fa, 0x0fd, 0x100
 };
 
-float       panTable[128][2] =
+UINT        panTable[2][128] =
 {
-    {1.0f, 0.000000f}, {1.0f, 0.000122f}, {1.0f, 0.000488f}, {1.0f, 0.001099f},
-    {1.0f, 0.001955f}, {1.0f, 0.003056f}, {1.0f, 0.004404f}, {1.0f, 0.005999f},
-    {1.0f, 0.007843f}, {1.0f, 0.009937f}, {1.0f, 0.012282f}, {1.0f, 0.014881f},
-    {1.0f, 0.017735f}, {1.0f, 0.020847f}, {1.0f, 0.024219f}, {1.0f, 0.027854f},
-    {1.0f, 0.031754f}, {1.0f, 0.035924f}, {1.0f, 0.040365f}, {1.0f, 0.045084f},
-    {1.0f, 0.050082f}, {1.0f, 0.055366f}, {1.0f, 0.060939f}, {1.0f, 0.066807f},
-    {1.0f, 0.072975f}, {1.0f, 0.079450f}, {1.0f, 0.086238f}, {1.0f, 0.093346f},
-    {1.0f, 0.100782f}, {1.0f, 0.108553f}, {1.0f, 0.116669f}, {1.0f, 0.125140f},
-    {1.0f, 0.133975f}, {1.0f, 0.143186f}, {1.0f, 0.152785f}, {1.0f, 0.162786f},
-    {1.0f, 0.173203f}, {1.0f, 0.184052f}, {1.0f, 0.195350f}, {1.0f, 0.207118f},
-    {1.0f, 0.219375f}, {1.0f, 0.232146f}, {1.0f, 0.245456f}, {1.0f, 0.259335f},
-    {1.0f, 0.273816f}, {1.0f, 0.288934f}, {1.0f, 0.304731f}, {1.0f, 0.321256f},
-    {1.0f, 0.338562f}, {1.0f, 0.356713f}, {1.0f, 0.375782f}, {1.0f, 0.395856f},
-    {1.0f, 0.417039f}, {1.0f, 0.439457f}, {1.0f, 0.463264f}, {1.0f, 0.488654f},
-    {1.0f, 0.515877f}, {1.0f, 0.545261f}, {1.0f, 0.577258f}, {1.0f, 0.612513f},
-    {1.0f, 0.652015f}, {1.0f, 0.697423f}, {1.0f, 0.751961f}, {1.0f, 0.823915f},
-    {1.0f, 1.0f}, {0.822534f, 1.0f}, {0.750031f, 1.0f}, {0.695089f, 1.0f},
-    {0.649354f, 1.0f}, {0.609575f, 1.0f}, {0.574082f, 1.0f}, {0.541877f, 1.0f},
-    {0.512308f, 1.0f}, {0.484921f, 1.0f}, {0.459385f, 1.0f}, {0.435447f, 1.0f},
-    {0.412913f, 1.0f}, {0.391626f, 1.0f}, {0.371461f, 1.0f}, {0.352311f, 1.0f},
-    {0.334090f, 1.0f}, {0.316722f, 1.0f}, {0.300146f, 1.0f}, {0.284305f, 1.0f},
-    {0.269151f, 1.0f}, {0.254644f, 1.0f}, {0.240745f, 1.0f}, {0.227423f, 1.0f},
-    {0.214647f, 1.0f}, {0.202391f, 1.0f}, {0.190632f, 1.0f}, {0.179348f, 1.0f},
-    {0.168521f, 1.0f}, {0.158131f, 1.0f}, {0.148165f, 1.0f}, {0.138605f, 1.0f},
-    {0.129441f, 1.0f}, {0.120658f, 1.0f}, {0.112246f, 1.0f}, {0.104194f, 1.0f},
-    {0.096492f, 1.0f}, {0.089132f, 1.0f}, {0.082106f, 1.0f}, {0.075405f, 1.0f},
-    {0.069024f, 1.0f}, {0.062954f, 1.0f}, {0.057191f, 1.0f}, {0.051728f, 1.0f},
-    {0.046561f, 1.0f}, {0.041685f, 1.0f}, {0.037095f, 1.0f}, {0.032787f, 1.0f},
-    {0.028758f, 1.0f}, {0.025004f, 1.0f}, {0.021522f, 1.0f}, {0.018308f, 1.0f},
-    {0.015361f, 1.0f}, {0.012678f, 1.0f}, {0.010257f, 1.0f}, {0.008095f, 1.0f},
-    {0.006192f, 1.0f}, {0.004545f, 1.0f}, {0.003154f, 1.0f}, {0.002018f, 1.0f},
-    {0.001134f, 1.0f}, {0.000504f, 1.0f}, {0.000126f, 1.0f}, {0.000000f, 1.0f}
+    {
+        0x100, 0x100, 0x100, 0x100, 0x100, 0x100, 0x100, 0x100, 0x100, 0x100, 0x100, 0x100, 0x100, 0x100, 0x100, 0x100,
+        0x100, 0x100, 0x100, 0x100, 0x100, 0x100, 0x100, 0x100, 0x100, 0x100, 0x100, 0x100, 0x100, 0x100, 0x100, 0x100,
+        0x100, 0x100, 0x100, 0x100, 0x100, 0x100, 0x100, 0x100, 0x100, 0x100, 0x100, 0x100, 0x100, 0x100, 0x100, 0x100,
+        0x100, 0x100, 0x100, 0x100, 0x100, 0x100, 0x100, 0x100, 0x100, 0x100, 0x100, 0x100, 0x100, 0x100, 0x100, 0x100,
+        0x100, 0x0fa, 0x0f4, 0x0ef, 0x0e9, 0x0e4, 0x0df, 0x0da, 0x0d4, 0x0cf, 0x0ca, 0x0c5, 0x0c0, 0x0bb, 0x0b6, 0x0b2,
+        0x0ad, 0x0a8, 0x0a4, 0x09f, 0x09a, 0x096, 0x091, 0x08d, 0x089, 0x084, 0x080, 0x07c, 0x078, 0x074, 0x070, 0x06c,
+        0x068, 0x064, 0x060, 0x05c, 0x058, 0x054, 0x051, 0x04d, 0x049, 0x046, 0x042, 0x03f, 0x03b, 0x038, 0x034, 0x031,
+        0x02d, 0x02a, 0x027, 0x024, 0x020, 0x01d, 0x01a, 0x017, 0x014, 0x011, 0x00e, 0x00b, 0x008, 0x005, 0x002, 0x000
+    },
+    {
+        0x000, 0x002, 0x005, 0x008, 0x00b, 0x00e, 0x011, 0x014, 0x017, 0x01a, 0x01d, 0x020, 0x023, 0x026, 0x029, 0x02d,
+        0x030, 0x033, 0x037, 0x03a, 0x03d, 0x041, 0x044, 0x048, 0x04b, 0x04f, 0x053, 0x056, 0x05a, 0x05e, 0x062, 0x066,
+        0x06a, 0x06d, 0x071, 0x075, 0x07a, 0x07e, 0x082, 0x086, 0x08a, 0x08f, 0x093, 0x097, 0x09c, 0x0a0, 0x0a5, 0x0a9,
+        0x0ae, 0x0b3, 0x0b7, 0x0bc, 0x0c1, 0x0c6, 0x0cb, 0x0d0, 0x0d5, 0x0da, 0x0df, 0x0e5, 0x0ea, 0x0ef, 0x0f5, 0x0fa,
+        0x100, 0x100, 0x100, 0x100, 0x100, 0x100, 0x100, 0x100, 0x100, 0x100, 0x100, 0x100, 0x100, 0x100, 0x100, 0x100,
+        0x100, 0x100, 0x100, 0x100, 0x100, 0x100, 0x100, 0x100, 0x100, 0x100, 0x100, 0x100, 0x100, 0x100, 0x100, 0x100,
+        0x100, 0x100, 0x100, 0x100, 0x100, 0x100, 0x100, 0x100, 0x100, 0x100, 0x100, 0x100, 0x100, 0x100, 0x100, 0x100,
+        0x100, 0x100, 0x100, 0x100, 0x100, 0x100, 0x100, 0x100, 0x100, 0x100, 0x100, 0x100, 0x100, 0x100, 0x100, 0x100
+    }
 };
 
 typedef struct
@@ -91,6 +71,7 @@ typedef struct
     int         pan;
     int         sustain;
     int         bend;
+    int         expression;
 } CHANNEL;
 
 typedef struct
@@ -99,7 +80,7 @@ typedef struct
     int         note;
     int         volume;
     UINT        phase, step;
-    short       stereo[2];
+    short       left, right;
     int         playing; // bit field
 } VOICE;
 
@@ -108,26 +89,26 @@ VOICE       midVoice[VOICES];
 
 EVENT       *eventData;
 
-int         midVolume = VOLUME;
+UINT        midVolume = 0x100;
 
 int         rateAcc = 65536;
 
 void voiceVolume(VOICE *voice)
 {
-    float       volume;
+    UINT        volume;
 
-    volume = midVolume * volumeTable[voice->channel->volume];
-    volume *= volumeTable[voice->volume];
+    volume = midVolume * volumeTable[voice->channel->volume * voice->channel->expression / 127] * volumeTable[voice->volume];
+    volume = (VOLUME * (volume >> 8)) >> 16;
 
-    voice->stereo[0] = volume * panTable[voice->channel->pan][0];
-    voice->stereo[1] = volume * panTable[voice->channel->pan][1];
+    voice->left = (volume * panTable[0][voice->channel->pan]) >> 8;
+    voice->right = (volume * panTable[1][voice->channel->pan]) >> 8;
 }
 
 void updateVolume(int volume)
 {
     int         voice;
 
-    midVolume = VOLUME * volume / 127;
+    midVolume = volumeTable[volume];
 
     for (voice = 0; voice < VOICES; voice++)
         if (midVoice[voice].playing)
@@ -152,6 +133,7 @@ void resetControls()
         midChannel[channel].pan = 64;
         midChannel[channel].sustain = 0;
         midChannel[channel].bend = 128;
+        midChannel[channel].expression = 127;
     }
 }
 
@@ -178,9 +160,13 @@ void frequencyStep(VOICE *voice)
     note += (bend >> 6) - 2;
     bend &= 63;
 
+#if 1
     diff = (frequencyTable[note + 1] - frequencyTable[note]) >> 16;
-
     voice->step = frequencyTable[note] + ((diff * pitchBendTable[bend]));
+#else // these alternative lines might provide more accurate frequencies, maybe?
+    diff = (frequencyTable[note + 1] - frequencyTable[note]) >> 8;
+    voice->step = frequencyTable[note] + ((diff * pitchBendTable[bend]) >> 8);
+#endif
 }
 
 void eventNoteOn()
@@ -257,7 +243,7 @@ void eventSustain()
     // sustain: 0=off, 2=on
     channel->sustain = ((sustain >> 1) | (sustain & 1)) << 1;
 
-    if (sustain != 0)
+    if (channel->sustain != 0)
         return;
 
     for (voice = 0; voice < VOICES; voice++)
@@ -266,7 +252,7 @@ void eventSustain()
                 midVoice[voice].playing &= NOTE_PLAY;
 }
 
-void eventChannel()
+void eventChannelVolume()
 {
     CHANNEL     *channel = &midChannel[eventData->channel];
     int         volume = eventData->data[1];
@@ -309,6 +295,20 @@ void eventChannelAftertouch()
             }
 }
 
+void eventExpression()
+{
+    CHANNEL     *channel = &midChannel[eventData->channel];
+    int         expression = eventData->data[1] & 0x7f;
+    int         voice;
+
+    channel->expression = expression;
+
+    for (voice = 0; voice < VOICES; voice++)
+        if (midVoice[voice].playing)
+            if (midVoice[voice].channel == channel)
+                voiceVolume(&midVoice[voice]);
+}
+
 void eventMessage()
 {
     int         message = eventData->data[0];
@@ -316,7 +316,7 @@ void eventMessage()
     switch (message)
     {
       case MM_VOLUME:
-        eventChannel();
+        eventChannelVolume();
         break;
 
       case MM_PAN:
@@ -339,8 +339,15 @@ void eventMessage()
         eventChannelAftertouch();
         break;
 
-      case MM_INSTR:
       case MM_EXPRESS:
+        eventExpression();
+        break;
+
+      case MM_SOUNDOFF:
+        resetVoices();
+        break;
+
+      case MM_INSTR:
       case MM_MODWHEEL:
       case MM_REG_LSB:
       case MM_REG_MSB:
@@ -375,8 +382,8 @@ void generateSample(short *buffer)
 
             phase = genPhase(&midVoice[voice]);
 
-            left += midVoice[voice].stereo[0] * phase;
-            right += midVoice[voice].stereo[1] * phase;
+            left += midVoice[voice].left * phase;
+            right += midVoice[voice].right * phase;
 
             midVoice[voice].phase += midVoice[voice].step * rate;
         }

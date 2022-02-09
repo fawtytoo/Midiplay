@@ -127,8 +127,8 @@ int main(int argc, char **argv)
             printf("Playing %*i/%i: %s\r\n", count, arg, argc - 1, name);
 
             length = Midiplay_Time();
-            count = digits(length / 60, 1);
-            printf("[  ] [    ] %*s / %i:%02i\r", count + 3, " ", length / 60, length % 60);
+            count = digits(length / 600, 1);
+            printf("[  ] [    ] %*s / %i:%02i.%i\r", count + 5, " ", length / 600, (length / 10) % 60, length % 10);
 
             Midiplay_Play(playing);
 
@@ -174,7 +174,7 @@ int main(int argc, char **argv)
                     Midiplay_Restart();
 
                 length = Midiplay_Time();
-                printf("[%s%s] [%3i%%] %*i:%02i\r", playing ? " " : "P", looping ? "L" : " ", volume, count, length / 60, length % 60);
+                printf("[%s%s] [%3i%%] %*i:%02i.%i\r", playing ? " " : "P", looping ? "L" : " ", volume, count, length / 600, (length / 10) % 60, length % 10);
             }
 
             printf("\33[K\r");

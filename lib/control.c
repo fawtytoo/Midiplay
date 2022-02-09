@@ -5,8 +5,6 @@
 #include "common.h"
 #include "event.h"
 
-#define TICKSAMPLES ((float)musicSamplerate * (float)beatTempo / (float)beatTicks) / 1000000.0f
-
 int         controllerMap[2][128] =
 {
     {   // mus
@@ -66,13 +64,36 @@ int         numTracks, numTracksEnded;
 BYTE        prevVolume[16]; // last known note volume on channel
 
 int         beatTicks, beatTempo;
-float       tickSamples, playSamples;
+int         playSamples;
 int         musicClock;
 
 int         timeTicks;
 int         timeTempo;
 
 int         oldTrack = 0;
+
+UINT        timerSecondAcc = 1000000;
+UINT        timerBeatAcc = 500000;
+UINT        timerRemainder = 0;
+
+int tickSamples()
+{
+    int         rateSec, rateBeat, rateTick;
+
+    rateSec = timerSecondAcc / musicSamplerate;
+    timerSecondAcc -= musicSamplerate * rateSec;
+    timerSecondAcc += 1000000;
+
+    rateBeat = timerBeatAcc / beatTicks;
+    timerBeatAcc -= beatTicks * rateBeat;
+    timerBeatAcc += beatTempo;
+
+    rateBeat += timerRemainder;
+    rateTick = rateBeat / rateSec;
+    timerRemainder = rateBeat - rateSec * rateTick;
+
+    return rateTick;
+}
 
 void updateTime()
 {
@@ -100,7 +121,13 @@ void initTracks()
     playSamples = 0.0f;
 
     beatTempo = 500000;
-    tickSamples = TICKSAMPLES;
+
+    // reset the timer accumulators
+    timerSecondAcc = 1000000;
+    timerBeatAcc = beatTempo;
+    timerRemainder = 0;
+
+    playSamples = 0;
 
     resetControls();
     resetVoices();
@@ -113,8 +140,6 @@ void initTracks()
 void setTempo()
 {
     beatTempo = (curTrack->event.data[0] << 16) | (curTrack->event.data[1] << 8) | curTrack->event.data[2];
-
-    tickSamples = TICKSAMPLES;
 }
 
 void endOfTrack()

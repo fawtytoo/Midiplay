@@ -38,7 +38,7 @@ void Midiplay_Output(short *, int);
 int Midiplay_IsPlaying(void);
 
 // Midiplay_Time
-// Returns time in seconds
+// Returns time in 1/10ths second
 
 // Calling this immediately after Midiplay_Load returns the length of the music
 // Calling this while Midiplay_IsPlaying returns the current position

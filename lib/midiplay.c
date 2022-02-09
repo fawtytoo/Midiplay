@@ -146,7 +146,7 @@ void Midiplay_Output(short *buffer, int length)
 
     while (length)
     {
-        if (playSamples < 1.0f)
+        if (playSamples == 0)
         {
             if (musicPlaying)
             {
@@ -154,10 +154,10 @@ void Midiplay_Output(short *buffer, int length)
                 musicEvents();
                 musicClock++;
             }
-            playSamples += tickSamples;
+            playSamples = tickSamples();
         }
 
-        samples = (int)playSamples;
+        samples = playSamples;
         if (samples > length)
             samples = length;
 
@@ -177,7 +177,7 @@ int Midiplay_Time()
     if (musicInit < 2)
         return 0;
 
-    return timeTicks / beatTicks;
+    return timeTicks * 10 / beatTicks;
 }
 
 void Midiplay_Loop(int looping)

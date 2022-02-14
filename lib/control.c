@@ -63,7 +63,7 @@ int         numTracks, numTracksEnded;
 
 BYTE        prevVolume[16]; // last known note volume on channel
 
-int         beatTicks, beatTempo;
+int         beatTicks = 96, beatTempo = 500000;
 int         playSamples;
 int         musicClock;
 

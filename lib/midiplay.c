@@ -28,7 +28,7 @@ function    musicEvents;
 
 int         musicInit = 0;
 
-int         musicSamplerate;
+int         musicSamplerate = 11025;
 int         musicLooping;
 int         musicPlaying = 0;
 

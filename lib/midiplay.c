@@ -140,11 +140,9 @@ int Midiplay_IsPlaying()
 
 void Midiplay_Output(short *buffer, int length)
 {
-    int         samples;
-
     length /= 2; // 1 sample = left + right
 
-    while (length)
+    while (length--)
     {
         if (playSamples == 0)
         {
@@ -157,18 +155,10 @@ void Midiplay_Output(short *buffer, int length)
             playSamples = tickSamples();
         }
 
-        samples = playSamples;
-        if (samples > length)
-            samples = length;
+        generateSample(buffer);
+        buffer += 2;
 
-        playSamples -= samples;
-        length -= samples;
-
-        while (samples--)
-        {
-            generateSample(buffer);
-            buffer += 2;
-        }
+        playSamples--;
     }
 }
 

@@ -102,6 +102,8 @@ void updateTime()
     timeTempo %= 1000000;
 }
 
+void eventNull() {}
+
 void initTracks()
 {
     int         track, channel;
@@ -111,7 +113,7 @@ void initTracks()
         midTrack[track].pos = midTrack[track].data;
         midTrack[track].done = 0;
         midTrack[track].clock = 0;
-        midTrack[track].midi.doEvent = NULL;
+        midTrack[track].midi.doEvent = eventNull;
     }
 
     for (channel = 0; channel < 16; channel++)
@@ -151,7 +153,7 @@ void endOfTrack()
 void endOfMidiTrack()
 {
     endOfTrack();
-    curTrack->midi.doEvent = NULL;
+    curTrack->midi.doEvent = eventNull;
     if (numTracksEnded < numTracks)
         return;
 
@@ -167,6 +169,7 @@ void endOfMidiTrack()
     // this is some hack! but it's more straight forward
     oldTrack = 0;
     curTrack = &midTrack[0];
+    // eventData does not need to be set
 }
 
 UINT getLength()
@@ -187,7 +190,7 @@ int getMusEvent(int *time)
 {
     BYTE        data, last;
 
-    curTrack->midi.doEvent = NULL;
+    curTrack->midi.doEvent = eventNull;
 
     data = *curTrack->pos++;
     curTrack->event.channel = data & 0x0f;
@@ -242,8 +245,7 @@ int getMusEvent(int *time)
         break;
     }
 
-    if (curTrack->midi.doEvent)
-        curTrack->midi.doEvent();
+    curTrack->midi.doEvent();
 
     if (last & 0x80)
         *time = getLength();
@@ -255,7 +257,7 @@ void getMidEvent()
 {
     BYTE        data, event = 0x0;
 
-    curTrack->midi.doEvent = NULL;
+    curTrack->midi.doEvent = eventNull;
 
     data = *curTrack->pos;
 
@@ -358,15 +360,14 @@ void trackMidEvents()
     for (track = 0; track < numTracks; track++)
     {
         curTrack = &midTrack[track];
-        eventData = &curTrack->event;
 
         if (curTrack->clock > musicClock)
             continue;
 
+        eventData = &curTrack->event;
         oldTrack = track;
 
-        if (curTrack->midi.doEvent)
-            curTrack->midi.doEvent();
+        curTrack->midi.doEvent();
 
         // when all tracks have ended, this will be set to track 0
         track = oldTrack;

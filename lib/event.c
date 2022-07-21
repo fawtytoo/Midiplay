@@ -365,28 +365,25 @@ short genPhase(VOICE *voice)
 
 void generateSample(short *buffer)
 {
-    int         voice;
-    short       left = 0, right = 0;
-    short       phase;
-    int         rate;
+    int     voice;
+    short   left = 0, right = 0;
+    short   phase;
+    int     rate;
 
-    if (musicPlaying)
+    rate = rateAcc / musicSamplerate;
+    rateAcc -= musicSamplerate * rate;
+
+    for (voice = 0; voice < VOICES; voice++)
     {
-        rate = rateAcc / musicSamplerate;
-        rateAcc -= musicSamplerate * rate;
+        if (midVoice[voice].playing == 0)
+            continue;
 
-        for (voice = 0; voice < VOICES; voice++)
-        {
-            if (midVoice[voice].playing == 0)
-                continue;
+        phase = genPhase(&midVoice[voice]);
 
-            phase = genPhase(&midVoice[voice]);
+        left += midVoice[voice].left * phase;
+        right += midVoice[voice].right * phase;
 
-            left += midVoice[voice].left * phase;
-            right += midVoice[voice].right * phase;
-
-            midVoice[voice].phase += midVoice[voice].step * rate;
-        }
+        midVoice[voice].phase += midVoice[voice].step * rate;
     }
 
     *buffer++ = left;

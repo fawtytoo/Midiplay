@@ -46,3 +46,4 @@ The library handles only a few basic events, but enough that would satisfy most 
 - [MID format](https://moddingwiki.shikadi.net/wiki/MID_Format)
 - [Technical docs](http://midi.teragonaudio.com/)
 - [Standard MIDI-File Format Spec 1.1](http://www.music.mcgill.ca/~ich/classes/mumt306/StandardMIDIfileformat.html)
+- [Official MIDI Specifications](https://www.midi.org/specifications)

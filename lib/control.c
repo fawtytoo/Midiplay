@@ -117,10 +117,13 @@ void initTracks()
     }
 
     for (channel = 0; channel < 16; channel++)
+    {
+        resetChannel(channel);
         prevVolume[channel] = 0;
+    }
 
     musicClock = 0;
-    playSamples = 0.0f;
+    playSamples = 0;
 
     beatTempo = 500000;
 
@@ -128,8 +131,6 @@ void initTracks()
     timerSecondAcc = 1000000;
     timerBeatAcc = beatTempo;
     timerRemainder = 0;
-
-    playSamples = 0;
 
     resetControls();
     resetVoices();

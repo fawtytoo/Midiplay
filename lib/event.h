@@ -30,6 +30,8 @@ enum
     MM_SOUNDOFF
 };
 
+void resetChannel(int);
+
 void resetControls(void);
 void resetVoices(void);
 

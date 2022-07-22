@@ -93,6 +93,12 @@ UINT        midVolume = 0x100;
 
 int         rateAcc = 65536;
 
+void resetChannel(int channel)
+{
+    midChannel[channel].volume = 100;
+    midChannel[channel].pan = 64;
+}
+
 void voiceVolume(VOICE *voice)
 {
     UINT        volume;
@@ -129,8 +135,6 @@ void resetControls()
 
     for (channel = 0; channel < 16; channel++)
     {
-        midChannel[channel].volume = 100;
-        midChannel[channel].pan = 64;
         midChannel[channel].sustain = 0;
         midChannel[channel].bend = 128;
         midChannel[channel].expression = 127;

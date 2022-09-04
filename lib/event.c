@@ -141,7 +141,7 @@ void resetControls()
     }
 }
 
-void eventNoteOff()
+void Event_NoteOff()
 {
     CHANNEL     *channel = &midChannel[eventData->channel];
     int         note = eventData->data[0];
@@ -173,7 +173,7 @@ void frequencyStep(VOICE *voice)
 #endif
 }
 
-void eventNoteOn()
+void Event_NoteOn()
 {
     CHANNEL     *channel = &midChannel[eventData->channel];
     int         note = eventData->data[0];
@@ -197,7 +197,7 @@ void eventNoteOn()
         }
 }
 
-void eventMuteNotes()
+void Event_MuteNotes()
 {
     CHANNEL     *channel = &midChannel[eventData->channel];
     int         voice;
@@ -208,7 +208,7 @@ void eventMuteNotes()
                 midVoice[voice].playing &= NOTE_SUSTAIN;
 }
 
-void eventPitchWheel()
+void Event_PitchWheel()
 {
     CHANNEL     *channel = &midChannel[eventData->channel];
     int         voice;
@@ -221,7 +221,7 @@ void eventPitchWheel()
                 frequencyStep(&midVoice[voice]);
 }
 
-void eventAftertouch()
+void Event_Aftertouch()
 {
     CHANNEL     *channel = &midChannel[eventData->channel];
     int         note = eventData->data[0];
@@ -238,7 +238,7 @@ void eventAftertouch()
                 }
 }
 
-void eventSustain()
+void Event_Sustain()
 {
     CHANNEL     *channel = &midChannel[eventData->channel];
     int         sustain = eventData->data[1] >> 6;
@@ -256,7 +256,7 @@ void eventSustain()
                 midVoice[voice].playing &= NOTE_PLAY;
 }
 
-void eventChannelVolume()
+void Event_ChannelVolume()
 {
     CHANNEL     *channel = &midChannel[eventData->channel];
     int         volume = eventData->data[1];
@@ -270,7 +270,7 @@ void eventChannelVolume()
                 voiceVolume(&midVoice[voice]);
 }
 
-void eventPan()
+void Event_Pan()
 {
     CHANNEL     *channel = &midChannel[eventData->channel];
     int         pan = eventData->data[1] & 0x7f;
@@ -284,7 +284,7 @@ void eventPan()
                 voiceVolume(&midVoice[voice]);
 }
 
-void eventChannelAftertouch()
+void Event_ChannelAftertouch()
 {
     CHANNEL     *channel = &midChannel[eventData->channel];
     int         volume = eventData->data[1];
@@ -299,7 +299,7 @@ void eventChannelAftertouch()
             }
 }
 
-void eventExpression()
+void Event_Expression()
 {
     CHANNEL     *channel = &midChannel[eventData->channel];
     int         expression = eventData->data[1] & 0x7f;
@@ -313,22 +313,22 @@ void eventExpression()
                 voiceVolume(&midVoice[voice]);
 }
 
-void eventMessage()
+void Event_Message()
 {
     int         message = eventData->data[0];
 
     switch (message)
     {
       case MM_VOLUME:
-        eventChannelVolume();
+        Event_ChannelVolume();
         break;
 
       case MM_PAN:
-        eventPan();
+        Event_Pan();
         break;
 
       case MM_NOTEOFF:
-        eventMuteNotes();
+        Event_MuteNotes();
         break;
 
       case MM_CTRLOFF:
@@ -336,15 +336,15 @@ void eventMessage()
         break;
 
       case MM_SUSTAIN: // FIXME
-        //eventSustain();
+        //Event_Sustain();
         break;
 
       case MM_AFTERTOUCH:
-        eventChannelAftertouch();
+        Event_ChannelAftertouch();
         break;
 
       case MM_EXPRESS:
-        eventExpression();
+        Event_Expression();
         break;
 
       case MM_SOUNDOFF:

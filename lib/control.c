@@ -203,7 +203,7 @@ int getMusEvent(int *time)
     {
       case 0x00: // release note
         curTrack->event.data[0] = (*curTrack->pos++ & 0x7f);
-        curTrack->midi.doEvent = eventNoteOff;
+        curTrack->midi.doEvent = Event_NoteOff;
         break;
 
       case 0x10: // play note
@@ -212,24 +212,24 @@ int getMusEvent(int *time)
         curTrack->event.data[1] = data & 0x80 ? (*curTrack->pos++ & 0x7f) : prevVolume[curTrack->event.channel];
         // should the volume be saved if the value is 0?
         prevVolume[curTrack->event.channel] = curTrack->event.data[1];
-        curTrack->midi.doEvent = curTrack->event.data[1] == 0 ? eventNoteOff : eventNoteOn;
+        curTrack->midi.doEvent = curTrack->event.data[1] == 0 ? Event_NoteOff : Event_NoteOn;
         break;
 
       case 0x20: // pitch wheel (adjusted to 14 bit value)
         curTrack->event.data[0] = (*curTrack->pos & 0x1) << 6;
         curTrack->event.data[1] = *curTrack->pos++ >> 1;
-        curTrack->midi.doEvent = eventPitchWheel;
+        curTrack->midi.doEvent = Event_PitchWheel;
         break;
 
       case 0x30: // system event
         curTrack->event.data[0] = controllerMap[0][*curTrack->pos++];
-        curTrack->midi.doEvent = eventMessage;
+        curTrack->midi.doEvent = Event_Message;
         break;
 
       case 0x40: // change controller
         curTrack->event.data[0] = controllerMap[0][*curTrack->pos++];
         curTrack->event.data[1] = *curTrack->pos++;
-        curTrack->midi.doEvent = eventMessage;
+        curTrack->midi.doEvent = Event_Message;
         break;
 
       case 0x50: // end of measure?
@@ -274,43 +274,43 @@ void getMidEvent()
       case 0x80:
         curTrack->event.data[0] = *curTrack->pos++;
         curTrack->event.data[1] = *curTrack->pos++;
-        curTrack->midi.doEvent = eventNoteOff;
+        curTrack->midi.doEvent = Event_NoteOff;
         break;
 
       case 0x90:
         curTrack->event.data[0] = *curTrack->pos++;
         curTrack->event.data[1] = *curTrack->pos++;
-        curTrack->midi.doEvent = curTrack->event.data[1] == 0 ? eventNoteOff : eventNoteOn;
+        curTrack->midi.doEvent = curTrack->event.data[1] == 0 ? Event_NoteOff : Event_NoteOn;
         break;
 
       case 0xa0:
         curTrack->event.data[0] = *curTrack->pos++;
         curTrack->event.data[1] = *curTrack->pos++;
-        curTrack->midi.doEvent = eventAftertouch;
+        curTrack->midi.doEvent = Event_Aftertouch;
         break;
 
       case 0xb0: // controller message
         curTrack->event.data[0] = controllerMap[1][*curTrack->pos++];
         curTrack->event.data[1] = *curTrack->pos++;
-        curTrack->midi.doEvent = eventMessage;
+        curTrack->midi.doEvent = Event_Message;
         break;
 
       case 0xc0:
         curTrack->event.data[0] = MM_INSTR;
         curTrack->event.data[1] = *curTrack->pos++;
-        curTrack->midi.doEvent = eventMessage;
+        curTrack->midi.doEvent = Event_Message;
         break;
 
       case 0xd0:
         curTrack->event.data[0] = MM_AFTERTOUCH;
         curTrack->event.data[1] = *curTrack->pos++;
-        curTrack->midi.doEvent = eventMessage;
+        curTrack->midi.doEvent = Event_Message;
         break;
 
       case 0xe0:
         curTrack->event.data[0] = *curTrack->pos++;
         curTrack->event.data[1] = *curTrack->pos++;
-        curTrack->midi.doEvent = eventPitchWheel;
+        curTrack->midi.doEvent = Event_PitchWheel;
         break;
 
       case 0xf0:

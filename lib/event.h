@@ -7,11 +7,11 @@
 
 typedef struct
 {
-    BYTE        channel;
-    BYTE        data[3];
+    BYTE    channel;
+    BYTE    data[3];
 } EVENT;
 
-extern EVENT        *eventData;
+extern EVENT    *eventData;
 
 enum
 {
@@ -35,11 +35,11 @@ void resetChannel(int);
 void resetControls(void);
 void resetVoices(void);
 
-void eventNoteOff(void);
-void eventNoteOn(void);
-void eventAftertouch(void);
-void eventMessage(void);
-void eventPitchWheel(void);
+void Event_NoteOff(void);
+void Event_NoteOn(void);
+void Event_Aftertouch(void);
+void Event_Message(void);
+void Event_PitchWheel(void);
 
 #endif
 

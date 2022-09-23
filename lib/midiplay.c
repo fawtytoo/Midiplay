@@ -56,7 +56,7 @@ int Midiplay_Load(void *data, int size, int looping)
     hdrMus = (HDR_MUS *)data;
     hdrMid = (HDR_MID *)data;
 
-    if (*(UINT *)hdrMus->id == ('M' | ('U' << 8) | ('S' << 16) | (0x1a << 24)))
+    if (hdrMus->id[0] == 'M' && hdrMus->id[1] == 'U' && hdrMus->id[2] == 'S' && hdrMus->id[3] == 0x1a)
     {
         if (size < sizeof(HDR_MUS))
             return 0;
@@ -72,7 +72,7 @@ int Midiplay_Load(void *data, int size, int looping)
 
         musicEvents = trackMusEvents;
     }
-    else if (*(UINT *)hdrMid->id == ('M' | ('T' << 8) | ('h' << 16) | ('d' << 24)))
+    else if (hdrMid->id[0] == 'M' && hdrMid->id[1] == 'T' && hdrMid->id[2] == 'h' && hdrMid->id[3] == 'd')
     {
         if (size < sizeof(HDR_MID))
             return 0;

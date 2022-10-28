@@ -99,6 +99,16 @@ void resetChannel(int channel)
     midChannel[channel].pan = 64;
 }
 
+void VoiceOff(VOICE *voice, int state)
+{
+    voice->playing &= state;
+    if (voice->playing)
+        return;
+
+    voice->left = 0;
+    voice->right = 0;
+}
+
 void voiceVolume(VOICE *voice)
 {
     UINT        volume;
@@ -126,7 +136,7 @@ void resetVoices()
     int         voice;
 
     for (voice = 0; voice < VOICES; voice++)
-        midVoice[voice].playing = 0;
+        VoiceOff(&midVoice[voice], 0);
 }
 
 void resetControls()
@@ -152,7 +162,7 @@ void Event_NoteOff()
         if (midVoice[voice].playing)
             if (midVoice[voice].channel == channel)
                 if (midVoice[voice].note == note)
-                    midVoice[voice].playing &= NOTE_SUSTAIN;
+                    VoiceOff(&midVoice[voice], NOTE_SUSTAIN);
 }
 
 void frequencyStep(VOICE *voice)
@@ -205,7 +215,7 @@ void Event_MuteNotes()
     for (voice = 0; voice < VOICES; voice++)
         if (midVoice[voice].playing)
             if (midVoice[voice].channel == channel)
-                midVoice[voice].playing &= NOTE_SUSTAIN;
+                VoiceOff(&midVoice[voice], NOTE_SUSTAIN);
 }
 
 void Event_PitchWheel()
@@ -253,7 +263,7 @@ void Event_Sustain()
     for (voice = 0; voice < VOICES; voice++)
         if (midVoice[voice].playing)
             if (midVoice[voice].channel == channel)
-                midVoice[voice].playing &= NOTE_PLAY;
+                VoiceOff(&midVoice[voice], NOTE_PLAY);
 }
 
 void Event_ChannelVolume()
@@ -379,9 +389,6 @@ void generateSample(short *buffer)
 
     for (voice = 0; voice < VOICES; voice++)
     {
-        if (midVoice[voice].playing == 0)
-            continue;
-
         phase = genPhase(&midVoice[voice]);
 
         left += midVoice[voice].left * phase;

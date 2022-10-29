@@ -6,25 +6,25 @@
 
 typedef struct
 {
-    char        id[4];
-    WORD        scoreLen;
-    WORD        scoreStart;
-    WORD        priChannels;
-    WORD        secChannels;
-    WORD        numInstruments;
-    WORD        ppqn; // we're going to use this to specify ppqn, default 70
+    char    id[4];
+    WORD    scoreLen;
+    WORD    scoreStart;
+    WORD    priChannels;
+    WORD    secChannels;
+    WORD    numInstruments;
+    WORD    ppqn; // we're going to use this to specify ppqn, default 70
 } __attribute__ ((packed)) HDR_MUS;
 
 typedef struct
 {
-    char        id[4];
-    int         length;
-    WORD        type;
-    WORD        ntracks;
-    WORD        ppqn;
+    char    id[4];
+    int     length;
+    WORD    type;
+    WORD    ntracks;
+    WORD    ppqn;
 } __attribute__ ((packed)) HDR_MID;
 
-function    musicEvents;
+function    MusicEvents;
 
 int         musicInit = 0;
 
@@ -32,8 +32,13 @@ int         musicSamplerate = 11025;
 int         musicLooping;
 int         musicPlaying = 0;
 
+int         rateAcc = 0, rateRem, phaseRate;
+
 void Midiplay_Init(int samplerate)
 {
+    phaseRate = 65536 / samplerate;
+    rateRem = 65536 - phaseRate * samplerate;
+
     musicSamplerate = samplerate;
 
     musicInit = 1;
@@ -41,8 +46,8 @@ void Midiplay_Init(int samplerate)
 
 int Midiplay_Load(void *data, int size, int looping)
 {
-    HDR_MUS     *hdrMus;
-    HDR_MID     *hdrMid;
+    HDR_MUS *hdrMus;
+    HDR_MID *hdrMid;
 
     if (musicInit == 0)
         return 0;
@@ -64,13 +69,13 @@ int Midiplay_Load(void *data, int size, int looping)
         if (size < hdrMus->scoreStart + hdrMus->scoreLen)
             return 0;
 
-        loadMusTrack(data + hdrMus->scoreStart);
+        LoadMusTrack(data + hdrMus->scoreStart);
 
         beatTicks = 70;
         if (hdrMus->ppqn > 0)
             beatTicks = hdrMus->ppqn;
 
-        musicEvents = trackMusEvents;
+        MusicEvents = TrackMusEvents;
     }
     else if (hdrMid->id[0] == 'M' && hdrMid->id[1] == 'T' && hdrMid->id[2] == 'h' && hdrMid->id[3] == 'd')
     {
@@ -81,21 +86,21 @@ int Midiplay_Load(void *data, int size, int looping)
         if (beatTicks < 0)
             return 0; // no support for SMPTE format yet
 
-        if (loadMidTracks(__builtin_bswap16(hdrMid->ntracks), data + sizeof(HDR_MID), size - sizeof(HDR_MID)) == 1)
+        if (LoadMidTracks(__builtin_bswap16(hdrMid->ntracks), data + sizeof(HDR_MID), size - sizeof(HDR_MID)) == 1)
             return 0; // track header failed
 
-        musicEvents = trackMidEvents;
+        MusicEvents = TrackMidEvents;
     }
     else
         return 0;
 
-    initTracks();
+    InitTracks();
     musicLooping = 0;
 
     while (numTracksEnded < numTracks)
     {
-        updateTime();
-        musicEvents();
+        UpdateTime();
+        MusicEvents();
         musicClock++;
     }
 
@@ -112,7 +117,7 @@ void Midiplay_Play(int playing)
         return;
 
     if (numTracksEnded == numTracks)
-        initTracks();
+        InitTracks();
 
     musicPlaying = playing;
 }
@@ -124,7 +129,7 @@ void Midiplay_SetVolume(int volume)
     else if (volume > 127)
         volume = 127;
 
-    updateVolume(volume);
+    UpdateVolume(volume);
 }
 
 int Midiplay_IsPlaying()
@@ -140,6 +145,8 @@ int Midiplay_IsPlaying()
 
 void Midiplay_Output(short *buffer, int length)
 {
+    int rate;
+
     length /= 2; // 1 sample = left + right
 
     while (length)
@@ -148,15 +155,22 @@ void Midiplay_Output(short *buffer, int length)
         {
             if (playSamples == 0)
             {
-                updateTime();
-                musicEvents();
+                UpdateTime();
+                MusicEvents();
                 musicClock++;
-                playSamples = tickSamples();
+                playSamples = TickSamples();
             }
 
             while (playSamples && length)
             {
-                generateSample(buffer);
+                rate = phaseRate;
+                rateAcc += rateRem;
+                if (rateAcc >= musicSamplerate)
+                {
+                    rateAcc -= musicSamplerate;
+                    rate++;
+                }
+                GenerateSample(buffer, rate);
                 buffer += 2;
                 playSamples--;
                 length--;
@@ -186,7 +200,7 @@ void Midiplay_Loop(int looping)
 
 void Midiplay_Restart()
 {
-    initTracks();
+    InitTracks();
 }
 
 // midiplay

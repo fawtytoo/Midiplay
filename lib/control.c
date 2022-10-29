@@ -5,7 +5,9 @@
 #include "common.h"
 #include "event.h"
 
-int         controllerMap[2][128] =
+#define MICROSEC    1000000
+
+int     controllerMap[2][128] =
 {
     {   // mus
         MM_INSTR, MM_NONE, MM_MODWHEEL, MM_VOLUME, MM_PAN, MM_EXPRESS, MM_NONE, MM_NONE,
@@ -47,78 +49,94 @@ int         controllerMap[2][128] =
 
 typedef struct
 {
-    BYTE        *data, *pos;
-    int         clock; // accumulator
+    BYTE    *data, *pos;
+    int     clock; // accumulator
     struct
     {
         BYTE        running;
-        function    doEvent;
+        function    DoEvent;
     } midi;
-    EVENT       event;
-    int         done;
+    EVENT   event;
+    int     done;
 } TRACK;
 
-TRACK       midTrack[65536], *curTrack;
-int         numTracks, numTracksEnded;
+TRACK   midTrack[65536], *curTrack;
+int     numTracks, numTracksEnded;
 
-BYTE        prevVolume[16]; // last known note volume on channel
+BYTE    prevVolume[16]; // last known note volume on channel
 
-int         beatTicks = 96, beatTempo = 500000;
-int         playSamples;
-int         musicClock;
+int     beatTicks = 96, beatTempo = 500000;
+int     playSamples;
+int     musicClock;
 
-int         timeTicks;
-int         timeTempo;
+int     timeTicks, timeTempo;
 
-int         oldTrack = 0;
+int     oldTrack = 0;
 
-UINT        timerSecondAcc = 1000000;
-UINT        timerBeatAcc = 500000;
-UINT        timerRemainder = 0;
+UINT    timerSecondAcc, timerSecondRate, timerSecondRem;
+UINT    timerBeatAcc, timerBeatRate, timerBeatRem;
+UINT    timerRemainder = 0;
 
-int tickSamples()
+void CalculateRates()
 {
-    int         rateSec, rateBeat, rateTick;
+    timerSecondRate = MICROSEC / musicSamplerate;
+    timerSecondRem = MICROSEC - timerSecondRate * musicSamplerate;
 
-    rateSec = timerSecondAcc / musicSamplerate;
-    timerSecondAcc -= musicSamplerate * rateSec;
-    timerSecondAcc += 1000000;
+    timerBeatRate = beatTempo / beatTicks;
+    timerBeatRem = beatTempo - timerBeatRate * beatTicks;
+}
 
-    rateBeat = timerBeatAcc / beatTicks;
-    timerBeatAcc -= beatTicks * rateBeat;
-    timerBeatAcc += beatTempo;
+int TickSamples()
+{
+    int     rateSec, rateBeat, rateTick;
 
-    rateBeat += timerRemainder;
+    rateSec = timerSecondRate;
+    timerSecondAcc += timerSecondRem;
+    if (timerSecondAcc >= musicSamplerate)
+    {
+        timerSecondAcc -= musicSamplerate;
+        rateSec++;
+    }
+
+    rateBeat = timerBeatRate + timerRemainder;
+    timerBeatAcc += timerBeatRem;
+    if (timerBeatAcc >= beatTempo)
+    {
+        timerBeatAcc -= beatTempo;
+        rateBeat++;
+    }
+
     rateTick = rateBeat / rateSec;
     timerRemainder = rateBeat - rateSec * rateTick;
 
     return rateTick;
 }
 
-void updateTime()
+void UpdateTime()
 {
     timeTempo += beatTempo;
-    timeTicks += (timeTempo / 1000000);
-    timeTempo %= 1000000;
+    timeTicks += (timeTempo / MICROSEC);
+    timeTempo %= MICROSEC;
 }
 
-void eventNull() {}
+// sometimes, you just want nothing to happen
+void EventNull() {}
 
-void initTracks()
+void InitTracks()
 {
-    int         track, channel;
+    int     track, channel;
 
     for (track = 0; track < numTracks; track++)
     {
         midTrack[track].pos = midTrack[track].data;
         midTrack[track].done = 0;
         midTrack[track].clock = 0;
-        midTrack[track].midi.doEvent = eventNull;
+        midTrack[track].midi.DoEvent = EventNull;
     }
 
     for (channel = 0; channel < 16; channel++)
     {
-        resetChannel(channel);
+        ResetChannel(channel);
         prevVolume[channel] = 0;
     }
 
@@ -128,33 +146,35 @@ void initTracks()
     beatTempo = 500000;
 
     // reset the timer accumulators
-    timerSecondAcc = 1000000;
-    timerBeatAcc = beatTempo;
+    timerSecondAcc = 0;
+    timerBeatAcc = 0;
     timerRemainder = 0;
+    CalculateRates();
 
-    resetControls();
-    resetVoices();
+    ResetControls();
+    ResetVoices();
 
     numTracksEnded = 0;
 
     timeTicks = timeTempo = 0;
 }
 
-void setTempo()
+void SetTempo()
 {
     beatTempo = (curTrack->event.data[0] << 16) | (curTrack->event.data[1] << 8) | curTrack->event.data[2];
+    CalculateRates();
 }
 
-void endOfTrack()
+void EndOfTrack()
 {
     curTrack->done = 1;
     numTracksEnded++;
 }
 
-void endOfMidiTrack()
+void EndOfMidiTrack()
 {
-    endOfTrack();
-    curTrack->midi.doEvent = eventNull;
+    EndOfTrack();
+    curTrack->midi.DoEvent = EventNull;
     if (numTracksEnded < numTracks)
         return;
 
@@ -164,7 +184,7 @@ void endOfMidiTrack()
         return;
     }
 
-    initTracks();
+    InitTracks();
     // at this point we need to parse a new event from track 0
     // but we may be in the middle of several tracks
     // this is some hack! but it's more straight forward
@@ -173,10 +193,10 @@ void endOfMidiTrack()
     // eventData does not need to be set
 }
 
-UINT getLength()
+UINT GetLength()
 {
-    UINT        length = 0;
-    BYTE        data;
+    UINT    length = 0;
+    BYTE    data;
 
     do
     {
@@ -187,11 +207,11 @@ UINT getLength()
     return length;
 }
 
-int getMusEvent(int *time)
+int GetMusEvent(int *time)
 {
-    BYTE        data, last;
+    BYTE    data, last;
 
-    curTrack->midi.doEvent = eventNull;
+    curTrack->midi.DoEvent = EventNull;
 
     data = *curTrack->pos++;
     curTrack->event.channel = data & 0x0f;
@@ -203,7 +223,7 @@ int getMusEvent(int *time)
     {
       case 0x00: // release note
         curTrack->event.data[0] = (*curTrack->pos++ & 0x7f);
-        curTrack->midi.doEvent = Event_NoteOff;
+        curTrack->midi.DoEvent = Event_NoteOff;
         break;
 
       case 0x10: // play note
@@ -212,31 +232,31 @@ int getMusEvent(int *time)
         curTrack->event.data[1] = data & 0x80 ? (*curTrack->pos++ & 0x7f) : prevVolume[curTrack->event.channel];
         // should the volume be saved if the value is 0?
         prevVolume[curTrack->event.channel] = curTrack->event.data[1];
-        curTrack->midi.doEvent = curTrack->event.data[1] == 0 ? Event_NoteOff : Event_NoteOn;
+        curTrack->midi.DoEvent = curTrack->event.data[1] == 0 ? Event_NoteOff : Event_NoteOn;
         break;
 
       case 0x20: // pitch wheel (adjusted to 14 bit value)
         curTrack->event.data[0] = (*curTrack->pos & 0x1) << 6;
         curTrack->event.data[1] = *curTrack->pos++ >> 1;
-        curTrack->midi.doEvent = Event_PitchWheel;
+        curTrack->midi.DoEvent = Event_PitchWheel;
         break;
 
       case 0x30: // system event
         curTrack->event.data[0] = controllerMap[0][*curTrack->pos++];
-        curTrack->midi.doEvent = Event_Message;
+        curTrack->midi.DoEvent = Event_Message;
         break;
 
       case 0x40: // change controller
         curTrack->event.data[0] = controllerMap[0][*curTrack->pos++];
         curTrack->event.data[1] = *curTrack->pos++;
-        curTrack->midi.doEvent = Event_Message;
+        curTrack->midi.DoEvent = Event_Message;
         break;
 
       case 0x50: // end of measure?
         break;
 
       case 0x60: // score end
-        curTrack->midi.doEvent = musicLooping ? initTracks : endOfTrack;
+        curTrack->midi.DoEvent = musicLooping ? InitTracks : EndOfTrack;
         last = 1 - musicLooping;
         break;
 
@@ -246,19 +266,19 @@ int getMusEvent(int *time)
         break;
     }
 
-    curTrack->midi.doEvent();
+    curTrack->midi.DoEvent();
 
     if (last & 0x80)
-        *time = getLength();
+        *time = GetLength();
 
     return last;
 }
 
-void getMidEvent()
+void GetMidEvent()
 {
-    BYTE        data, event = 0x0;
+    BYTE    data, event = 0x0;
 
-    curTrack->midi.doEvent = eventNull;
+    curTrack->midi.DoEvent = EventNull;
 
     data = *curTrack->pos;
 
@@ -274,43 +294,43 @@ void getMidEvent()
       case 0x80:
         curTrack->event.data[0] = *curTrack->pos++;
         curTrack->event.data[1] = *curTrack->pos++;
-        curTrack->midi.doEvent = Event_NoteOff;
+        curTrack->midi.DoEvent = Event_NoteOff;
         break;
 
       case 0x90:
         curTrack->event.data[0] = *curTrack->pos++;
         curTrack->event.data[1] = *curTrack->pos++;
-        curTrack->midi.doEvent = curTrack->event.data[1] == 0 ? Event_NoteOff : Event_NoteOn;
+        curTrack->midi.DoEvent = curTrack->event.data[1] == 0 ? Event_NoteOff : Event_NoteOn;
         break;
 
       case 0xa0:
         curTrack->event.data[0] = *curTrack->pos++;
         curTrack->event.data[1] = *curTrack->pos++;
-        curTrack->midi.doEvent = Event_Aftertouch;
+        curTrack->midi.DoEvent = Event_Aftertouch;
         break;
 
       case 0xb0: // controller message
         curTrack->event.data[0] = controllerMap[1][*curTrack->pos++];
         curTrack->event.data[1] = *curTrack->pos++;
-        curTrack->midi.doEvent = Event_Message;
+        curTrack->midi.DoEvent = Event_Message;
         break;
 
       case 0xc0:
         curTrack->event.data[0] = MM_INSTR;
         curTrack->event.data[1] = *curTrack->pos++;
-        curTrack->midi.doEvent = Event_Message;
+        curTrack->midi.DoEvent = Event_Message;
         break;
 
       case 0xd0:
         curTrack->event.data[0] = MM_AFTERTOUCH;
         curTrack->event.data[1] = *curTrack->pos++;
-        curTrack->midi.doEvent = Event_Message;
+        curTrack->midi.DoEvent = Event_Message;
         break;
 
       case 0xe0:
         curTrack->event.data[0] = *curTrack->pos++;
         curTrack->event.data[1] = *curTrack->pos++;
-        curTrack->midi.doEvent = Event_PitchWheel;
+        curTrack->midi.DoEvent = Event_PitchWheel;
         break;
 
       case 0xf0:
@@ -319,7 +339,7 @@ void getMidEvent()
             data = *curTrack->pos++;
             if (data == 0x2f) // end of track
             {
-                curTrack->midi.doEvent = endOfMidiTrack;
+                curTrack->midi.DoEvent = EndOfMidiTrack;
                 return;
             }
             else if (data == 0x51 && *curTrack->pos == 3)
@@ -327,11 +347,11 @@ void getMidEvent()
                 curTrack->event.data[0] = curTrack->pos[1];
                 curTrack->event.data[1] = curTrack->pos[2];
                 curTrack->event.data[2] = curTrack->pos[3];
-                curTrack->midi.doEvent = setTempo;
+                curTrack->midi.DoEvent = SetTempo;
             }
         }
 
-        curTrack->pos += getLength();
+        curTrack->pos += GetLength();
         return; // don't want to affect running events
     }
 
@@ -339,9 +359,9 @@ void getMidEvent()
         curTrack->midi.running = event;
 }
 
-void trackMusEvents()
+void TrackMusEvents()
 {
-    int         ticks;
+    int     ticks;
 
     if (curTrack->done)
         return;
@@ -349,14 +369,14 @@ void trackMusEvents()
     if (curTrack->clock > musicClock)
         return;
 
-    while (getMusEvent(&ticks) == 0);
+    while (GetMusEvent(&ticks) == 0);
 
     curTrack->clock += ticks;
 }
 
-void trackMidEvents()
+void TrackMidEvents()
 {
-    int         track, ticks;
+    int     track, ticks;
 
     for (track = 0; track < numTracks; track++)
     {
@@ -368,7 +388,7 @@ void trackMidEvents()
         eventData = &curTrack->event;
         oldTrack = track;
 
-        curTrack->midi.doEvent();
+        curTrack->midi.DoEvent();
 
         // when all tracks have ended, this will be set to track 0
         track = oldTrack;
@@ -376,9 +396,9 @@ void trackMidEvents()
         if (curTrack->done)
             continue;
 
-        ticks = getLength();
+        ticks = GetLength();
         curTrack->clock += ticks;
-        getMidEvent();
+        GetMidEvent();
 
         // a bit of hacking here to avoid a while loop
         if (ticks == 0)
@@ -386,7 +406,7 @@ void trackMidEvents()
     }
 }
 
-void loadMusTrack(BYTE *data)
+void LoadMusTrack(BYTE *data)
 {
     midTrack[0].data = data;
     curTrack = &midTrack[0];
@@ -395,10 +415,10 @@ void loadMusTrack(BYTE *data)
     numTracks = 1;
 }
 
-int loadMidTracks(int count, BYTE *data, int size)
+int LoadMidTracks(int count, BYTE *data, int size)
 {
-    int         track;
-    int         length;
+    int     track;
+    int     length;
 
     for (track = 0; track < count; track++)
     {

@@ -9,7 +9,7 @@
 #define NOTE_SUSTAIN    2
 
 // all frequencies are 16.16
-UINT        frequencyTable[128] =
+UINT    frequencyTable[128] =
 {
     0x00082d01, 0x0008a976, 0x00092d51, 0x0009b904, 0x000a4d05, 0x000ae9d3, 0x000b8ff4, 0x000c3ff6, 0x000cfa6f, 0x000dc000, 0x000e914f, 0x000f6f10, 0x00105a02, 0x001152ec, 0x00125aa2, 0x00137208,
     0x00149a0a, 0x0015d3a6, 0x00171fe9, 0x00187fed, 0x0019f4df, 0x001b8000, 0x001d229e, 0x001ede22, 0x0020b404, 0x0022a5d7, 0x0024b545, 0x0026e410, 0x00293414, 0x002ba74d, 0x002e3fd2, 0x0030ffda,
@@ -21,7 +21,7 @@ UINT        frequencyTable[128] =
     0x149a0a66, 0x15d3a6ea, 0x171fe927, 0x187fed37, 0x19f4e022, 0x1b800000, 0x1d229efa, 0x1ede21c7, 0x20b404a1, 0x22a5d85c, 0x24b54583, 0x26e41040, 0x2934153e, 0x2ba74d5b, 0x2e3fd24f, 0x30ffdaf7
 };
 
-UINT        pitchBendTable[64] =
+UINT    pitchBendTable[64] =
 {
     0x0000, 0x02c9, 0x059b, 0x0874, 0x0b55, 0x0e3e, 0x1130, 0x1429, 0x172b, 0x1a35, 0x1d48, 0x2063, 0x2387, 0x26b4, 0x29e9, 0x2d28,
     0x306f, 0x33c0, 0x371a, 0x3a7d, 0x3dea, 0x4160, 0x44e0, 0x486a, 0x4bfd, 0x4f9b, 0x5342, 0x56f4, 0x5ab0, 0x5e76, 0x6247, 0x6623,
@@ -29,7 +29,7 @@ UINT        pitchBendTable[64] =
     0xae89, 0xb33a, 0xb7f7, 0xbcc1, 0xc199, 0xc67f, 0xcb72, 0xd072, 0xd581, 0xda9e, 0xdfc9, 0xe502, 0xea4a, 0xefa1, 0xf507, 0xfa7c
 };
 
-UINT        volumeTable[128] =
+UINT    volumeTable[128] =
 {
     0x000, 0x001, 0x002, 0x004, 0x005, 0x007, 0x008, 0x009, 0x00b, 0x00c, 0x00e, 0x00f, 0x011, 0x012, 0x014, 0x015,
     0x017, 0x018, 0x01a, 0x01b, 0x01d, 0x01f, 0x020, 0x022, 0x023, 0x025, 0x027, 0x028, 0x02a, 0x02b, 0x02d, 0x02f,
@@ -41,7 +41,7 @@ UINT        volumeTable[128] =
     0x0d7, 0x0da, 0x0dc, 0x0df, 0x0e2, 0x0e4, 0x0e7, 0x0ea, 0x0ec, 0x0ef, 0x0f2, 0x0f4, 0x0f7, 0x0fa, 0x0fd, 0x100
 };
 
-UINT        panTable[2][128] =
+UINT    panTable[2][128] =
 {
     {
         0x100, 0x100, 0x100, 0x100, 0x100, 0x100, 0x100, 0x100, 0x100, 0x100, 0x100, 0x100, 0x100, 0x100, 0x100, 0x100,
@@ -67,33 +67,31 @@ UINT        panTable[2][128] =
 
 typedef struct
 {
-    int         volume;
-    int         pan;
-    int         sustain;
-    int         bend;
-    int         expression;
+    int     volume;
+    int     pan;
+    int     sustain;
+    int     bend;
+    int     expression;
 } CHANNEL;
 
 typedef struct
 {
-    CHANNEL     *channel;
-    int         note;
-    int         volume;
-    UINT        phase, step;
-    short       left, right;
-    int         playing; // bit field
+    CHANNEL *channel;
+    int     note;
+    int     volume;
+    UINT    phase, step;
+    short   left[2], right[2];
+    int     playing; // bit field
 } VOICE;
 
-CHANNEL     midChannel[16];
-VOICE       midVoice[VOICES];
+CHANNEL midChannel[16];
+VOICE   midVoice[VOICES], *voiceHead = &midVoice[0], *voiceTail = &midVoice[VOICES - 1];
 
-EVENT       *eventData;
+EVENT   *eventData;
 
-UINT        midVolume = 0x100;
+UINT    midVolume = 0x100;
 
-int         rateAcc = 65536;
-
-void resetChannel(int channel)
+void ResetChannel(int channel)
 {
     midChannel[channel].volume = 100;
     midChannel[channel].pan = 64;
@@ -105,43 +103,45 @@ void VoiceOff(VOICE *voice, int state)
     if (voice->playing)
         return;
 
-    voice->left = 0;
-    voice->right = 0;
+    voice->left[0] = voice->left[1] = 0;
+    voice->right[0] = voice->right[1] = 0;
 }
 
-void voiceVolume(VOICE *voice)
+void VoiceVolume(VOICE *voice)
 {
-    UINT        volume;
+    UINT    volume;
 
     volume = midVolume * volumeTable[voice->channel->volume * voice->channel->expression / 127] * volumeTable[voice->volume];
     volume = (VOLUME * (volume >> 8)) >> 16;
 
-    voice->left = (volume * panTable[0][voice->channel->pan]) >> 8;
-    voice->right = (volume * panTable[1][voice->channel->pan]) >> 8;
+    voice->left[0] = (volume * panTable[0][voice->channel->pan]) >> 8;
+    voice->right[0] = (volume * panTable[1][voice->channel->pan]) >> 8;
+    voice->left[1] = -voice->left[0];
+    voice->right[1] = -voice->right[0];
 }
 
-void updateVolume(int volume)
+void UpdateVolume(int volume)
 {
-    int         voice;
+    VOICE   *voice;
 
     midVolume = volumeTable[volume];
 
-    for (voice = 0; voice < VOICES; voice++)
-        if (midVoice[voice].playing)
-            voiceVolume(&midVoice[voice]);
+    for (voice = voiceHead; voice <= voiceTail; voice++)
+        if (voice->playing)
+            VoiceVolume(voice);
 }
 
-void resetVoices()
+void ResetVoices()
 {
-    int         voice;
+    VOICE   *voice;
 
-    for (voice = 0; voice < VOICES; voice++)
-        VoiceOff(&midVoice[voice], 0);
+    for (voice = voiceHead; voice <= voiceTail; voice++)
+        VoiceOff(voice, 0);
 }
 
-void resetControls()
+void ResetControls()
 {
-    int         channel;
+    int     channel;
 
     for (channel = 0; channel < 16; channel++)
     {
@@ -153,55 +153,50 @@ void resetControls()
 
 void Event_NoteOff()
 {
-    CHANNEL     *channel = &midChannel[eventData->channel];
-    int         note = eventData->data[0];
+    CHANNEL *channel = &midChannel[eventData->channel];
+    int     note = eventData->data[0];
     //int         volume = eventData->data[1];
-    int         voice;
+    VOICE   *voice;
 
-    for (voice = 0; voice < VOICES; voice++)
-        if (midVoice[voice].playing)
-            if (midVoice[voice].channel == channel)
-                if (midVoice[voice].note == note)
-                    VoiceOff(&midVoice[voice], NOTE_SUSTAIN);
+    for (voice = voiceHead; voice <= voiceTail; voice++)
+        if (voice->playing)
+            if (voice->channel == channel)
+                if (voice->note == note)
+                    VoiceOff(voice, NOTE_SUSTAIN);
 }
 
-void frequencyStep(VOICE *voice)
+void FrequencyStep(VOICE *voice)
 {
-    int         note = voice->note;
-    int         bend = voice->channel->bend;
-    UINT        diff;
+    int     note = voice->note;
+    int     bend = voice->channel->bend;
+    UINT    diff;
 
     note += (bend >> 6) - 2;
     bend &= 63;
 
-#if 1
-    diff = (frequencyTable[note + 1] - frequencyTable[note]) >> 16;
-    voice->step = frequencyTable[note] + ((diff * pitchBendTable[bend]));
-#else // these alternative lines might provide more accurate frequencies, maybe?
     diff = (frequencyTable[note + 1] - frequencyTable[note]) >> 8;
     voice->step = frequencyTable[note] + ((diff * pitchBendTable[bend]) >> 8);
-#endif
 }
 
 void Event_NoteOn()
 {
-    CHANNEL     *channel = &midChannel[eventData->channel];
-    int         note = eventData->data[0];
-    int         volume = eventData->data[1];
-    int         voice;
+    CHANNEL *channel = &midChannel[eventData->channel];
+    int     note = eventData->data[0];
+    int     volume = eventData->data[1];
+    VOICE   *voice;
 
-    for (voice = 0; voice < VOICES; voice++)
-        if (midVoice[voice].playing == 0)
+    for (voice = voiceHead; voice <= voiceTail; voice++)
+        if (voice->playing == 0)
         {
-            midVoice[voice].channel = channel;
-            midVoice[voice].note = note;
-            midVoice[voice].volume = volume;
-            voiceVolume(&midVoice[voice]);
+            voice->channel = channel;
+            voice->note = note;
+            voice->volume = volume;
+            VoiceVolume(voice);
 
-            frequencyStep(&midVoice[voice]);
-            midVoice[voice].phase = 0;
+            FrequencyStep(voice);
+            voice->phase = 0;
 
-            midVoice[voice].playing = NOTE_PLAY | channel->sustain;
+            voice->playing = NOTE_PLAY | channel->sustain;
 
             break;
         }
@@ -209,50 +204,50 @@ void Event_NoteOn()
 
 void Event_MuteNotes()
 {
-    CHANNEL     *channel = &midChannel[eventData->channel];
-    int         voice;
+    CHANNEL *channel = &midChannel[eventData->channel];
+    VOICE   *voice;
 
-    for (voice = 0; voice < VOICES; voice++)
-        if (midVoice[voice].playing)
-            if (midVoice[voice].channel == channel)
-                VoiceOff(&midVoice[voice], NOTE_SUSTAIN);
+    for (voice = voiceHead; voice <= voiceTail; voice++)
+        if (voice->playing)
+            if (voice->channel == channel)
+                VoiceOff(voice, NOTE_SUSTAIN);
 }
 
 void Event_PitchWheel()
 {
-    CHANNEL     *channel = &midChannel[eventData->channel];
-    int         voice;
+    CHANNEL *channel = &midChannel[eventData->channel];
+    VOICE   *voice;
 
     channel->bend = ((eventData->data[0] & 0x7f) | (eventData->data[1] << 7)) >> 6; // 8 bit values
 
-    for (voice = 0; voice < VOICES; voice++)
-        if (midVoice[voice].playing)
-            if (midVoice[voice].channel == channel)
-                frequencyStep(&midVoice[voice]);
+    for (voice = voiceHead; voice <= voiceTail; voice++)
+        if (voice->playing)
+            if (voice->channel == channel)
+                FrequencyStep(voice);
 }
 
 void Event_Aftertouch()
 {
-    CHANNEL     *channel = &midChannel[eventData->channel];
-    int         note = eventData->data[0];
-    int         volume = eventData->data[1];
-    int         voice;
+    CHANNEL *channel = &midChannel[eventData->channel];
+    int     note = eventData->data[0];
+    int     volume = eventData->data[1];
+    VOICE   *voice;
 
-    for (voice = 0; voice < VOICES; voice++)
-        if (midVoice[voice].playing)
-            if (midVoice[voice].channel == channel)
-                if (midVoice[voice].note == note)
+    for (voice = voiceHead; voice <= voiceTail; voice++)
+        if (voice->playing)
+            if (voice->channel == channel)
+                if (voice->note == note)
                 {
-                    midVoice[voice].volume = volume;
-                    voiceVolume(&midVoice[voice]);
+                    voice->volume = volume;
+                    VoiceVolume(voice);
                 }
 }
 
 void Event_Sustain()
 {
-    CHANNEL     *channel = &midChannel[eventData->channel];
-    int         sustain = eventData->data[1] >> 6;
-    int         voice;
+    CHANNEL *channel = &midChannel[eventData->channel];
+    int     sustain = eventData->data[1] >> 6;
+    VOICE   *voice;
 
     // sustain: 0=off, 2=on
     channel->sustain = ((sustain >> 1) | (sustain & 1)) << 1;
@@ -260,74 +255,72 @@ void Event_Sustain()
     if (channel->sustain != 0)
         return;
 
-    for (voice = 0; voice < VOICES; voice++)
-        if (midVoice[voice].playing)
-            if (midVoice[voice].channel == channel)
-                VoiceOff(&midVoice[voice], NOTE_PLAY);
+    for (voice = voiceHead; voice <= voiceTail; voice++)
+        if (voice->playing)
+            if (voice->channel == channel)
+                VoiceOff(voice, NOTE_PLAY);
 }
 
 void Event_ChannelVolume()
 {
-    CHANNEL     *channel = &midChannel[eventData->channel];
-    int         volume = eventData->data[1];
-    int         voice;
+    CHANNEL *channel = &midChannel[eventData->channel];
+    int     volume = eventData->data[1];
+    VOICE   *voice;
 
     channel->volume = volume & 0x7f;
 
-    for (voice = 0; voice < VOICES; voice++)
-        if (midVoice[voice].playing)
-            if (midVoice[voice].channel == channel)
-                voiceVolume(&midVoice[voice]);
+    for (voice = voiceHead; voice <= voiceTail; voice++)
+        if (voice->playing)
+            if (voice->channel == channel)
+                VoiceVolume(voice);
 }
 
 void Event_Pan()
 {
-    CHANNEL     *channel = &midChannel[eventData->channel];
-    int         pan = eventData->data[1] & 0x7f;
-    int         voice;
+    CHANNEL *channel = &midChannel[eventData->channel];
+    int     pan = eventData->data[1] & 0x7f;
+    VOICE   *voice;
 
     channel->pan = pan;
 
-    for (voice = 0; voice < VOICES; voice++)
-        if (midVoice[voice].playing)
-            if (midVoice[voice].channel == channel)
-                voiceVolume(&midVoice[voice]);
+    for (voice = voiceHead; voice <= voiceTail; voice++)
+        if (voice->playing)
+            if (voice->channel == channel)
+                VoiceVolume(voice);
 }
 
 void Event_ChannelAftertouch()
 {
-    CHANNEL     *channel = &midChannel[eventData->channel];
-    int         volume = eventData->data[1];
-    int         voice;
+    CHANNEL *channel = &midChannel[eventData->channel];
+    int     volume = eventData->data[1];
+    VOICE   *voice;
 
-    for (voice = 0; voice < VOICES; voice++)
-        if (midVoice[voice].playing)
-            if (midVoice[voice].channel == channel)
+    for (voice = voiceHead; voice <= voiceTail; voice++)
+        if (voice->playing)
+            if (voice->channel == channel)
             {
-                midVoice[voice].volume = volume;
-                voiceVolume(&midVoice[voice]);
+                voice->volume = volume;
+                VoiceVolume(voice);
             }
 }
 
 void Event_Expression()
 {
-    CHANNEL     *channel = &midChannel[eventData->channel];
-    int         expression = eventData->data[1] & 0x7f;
-    int         voice;
+    CHANNEL *channel = &midChannel[eventData->channel];
+    int     expression = eventData->data[1] & 0x7f;
+    VOICE   *voice;
 
     channel->expression = expression;
 
-    for (voice = 0; voice < VOICES; voice++)
-        if (midVoice[voice].playing)
-            if (midVoice[voice].channel == channel)
-                voiceVolume(&midVoice[voice]);
+    for (voice = voiceHead; voice <= voiceTail; voice++)
+        if (voice->playing)
+            if (voice->channel == channel)
+                VoiceVolume(voice);
 }
 
 void Event_Message()
 {
-    int         message = eventData->data[0];
-
-    switch (message)
+    switch (eventData->data[0])
     {
       case MM_VOLUME:
         Event_ChannelVolume();
@@ -342,7 +335,7 @@ void Event_Message()
         break;
 
       case MM_CTRLOFF:
-        resetControls();
+        ResetControls();
         break;
 
       case MM_SUSTAIN: // FIXME
@@ -358,7 +351,7 @@ void Event_Message()
         break;
 
       case MM_SOUNDOFF:
-        resetVoices();
+        ResetVoices();
         break;
 
       case MM_INSTR:
@@ -372,35 +365,24 @@ void Event_Message()
     }
 }
 
-short genPhase(VOICE *voice)
+void GenerateSample(short *buffer, short rate)
 {
-    return ((voice->phase >> 31) << 1) - 1;
-}
-
-void generateSample(short *buffer)
-{
-    int     voice;
+    VOICE   *voice;
     short   left = 0, right = 0;
     short   phase;
-    int     rate;
 
-    rate = rateAcc / musicSamplerate;
-    rateAcc -= musicSamplerate * rate;
-
-    for (voice = 0; voice < VOICES; voice++)
+    for (voice = voiceHead; voice <= voiceTail; voice++)
     {
-        phase = genPhase(&midVoice[voice]);
+        phase = voice->phase >> 31;
 
-        left += midVoice[voice].left * phase;
-        right += midVoice[voice].right * phase;
+        left += voice->left[phase];
+        right += voice->right[phase];
 
-        midVoice[voice].phase += midVoice[voice].step * rate;
+        voice->phase += voice->step * rate;
     }
 
     *buffer++ = left;
     *buffer = right;
-
-    rateAcc += 65536;
 }
 
 // midiplay

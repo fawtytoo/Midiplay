@@ -30,10 +30,10 @@ enum
     MM_SOUNDOFF
 };
 
-void resetChannel(int);
+void ResetChannel(int);
 
-void resetControls(void);
-void resetVoices(void);
+void ResetControls(void);
+void ResetVoices(void);
 
 void Event_NoteOff(void);
 void Event_NoteOn(void);

@@ -6,11 +6,11 @@
 #define __COMMON_H__
 
 #ifndef NULL
-#define NULL        0
+#define NULL    0
 #endif
 
-#define VOICES      24
-#define VOLUME      32760 / VOICES
+#define VOICES  24
+#define VOLUME  32760 / VOICES
 
 typedef unsigned short  WORD;
 typedef unsigned char   BYTE;
@@ -18,27 +18,27 @@ typedef unsigned int    UINT;
 
 typedef void(*function)(void);
 
-extern int      musicSamplerate;
-extern int      musicPlaying, musicLooping;
-extern int      musicVolume;
+extern int  musicSamplerate;
+extern int  musicPlaying, musicLooping;
+extern int  musicVolume;
 
-extern int      beatTicks, beatTempo;
-extern int      musicClock;
-extern int      playSamples;
+extern int  beatTicks, beatTempo;
+extern int  musicClock;
+extern int  playSamples;
 
-extern int      timeTicks;
+extern int  timeTicks;
 
-extern int      numTracks, numTracksEnded;
+extern int  numTracks, numTracksEnded;
 
-void loadMusTrack(BYTE *);
-int loadMidTracks(int, BYTE *, int);
-void initTracks(void);
-void trackMusEvents(void);
-void trackMidEvents(void);
-void updateTime(void);
-void updateVolume(int);
-void generateSample(short *);
-int tickSamples(void);
+void LoadMusTrack(BYTE *);
+int LoadMidTracks(int, BYTE *, int);
+void InitTracks(void);
+void TrackMusEvents(void);
+void TrackMidEvents(void);
+void UpdateTime(void);
+void UpdateVolume(int);
+void GenerateSample(short *, short);
+int TickSamples(void);
 
 #endif
 

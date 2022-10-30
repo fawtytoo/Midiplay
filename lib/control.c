@@ -4,6 +4,7 @@
 
 #include "common.h"
 #include "event.h"
+#include "timer.h"
 
 #define MICROSEC    1000000
 
@@ -66,53 +67,14 @@ int     numTracks, numTracksEnded;
 BYTE    prevVolume[16]; // last known note volume on channel
 
 int     beatTicks = 96, beatTempo = 500000;
-int     playSamples;
+int     playSamples, playFlag;
 int     musicClock;
 
 int     timeTicks, timeTempo;
 
 int     oldTrack = 0;
 
-UINT    timerSecondAcc, timerSecondRate, timerSecondRem;
-UINT    timerBeatAcc, timerBeatRate, timerBeatRem;
-UINT    timerRemainder = 0;
-
-void CalculateRates()
-{
-    timerSecondRate = MICROSEC / musicSamplerate;
-    timerSecondRem = MICROSEC - timerSecondRate * musicSamplerate;
-
-    timerBeatRate = beatTempo / beatTicks;
-    timerBeatRem = beatTempo - timerBeatRate * beatTicks;
-}
-
-int TickSamples()
-{
-    int     rateSec, rateBeat, rateTick;
-
-    rateSec = timerSecondRate;
-    timerSecondAcc += timerSecondRem;
-    if (timerSecondAcc >= musicSamplerate)
-    {
-        timerSecondAcc -= musicSamplerate;
-        rateSec++;
-    }
-
-    rateBeat = timerBeatRate + timerRemainder;
-    timerBeatAcc += timerBeatRem;
-    if (timerBeatAcc >= beatTempo)
-    {
-        timerBeatAcc -= beatTempo;
-        rateBeat++;
-    }
-
-    rateTick = rateBeat / rateSec;
-    timerRemainder = rateBeat - rateSec * rateTick;
-
-    return rateTick;
-}
-
-void UpdateTime()
+void UpdateScoreTime()
 {
     timeTempo += beatTempo;
     timeTicks += (timeTempo / MICROSEC);
@@ -142,14 +104,10 @@ void InitTracks()
 
     musicClock = 0;
     playSamples = 0;
+    playFlag = 1;
 
     beatTempo = 500000;
-
-    // reset the timer accumulators
-    timerSecondAcc = 0;
-    timerBeatAcc = 0;
-    timerRemainder = 0;
-    CalculateRates();
+    SetTimer(&timerBeat, beatTempo, beatTicks);
 
     ResetControls();
     ResetVoices();
@@ -161,8 +119,9 @@ void InitTracks()
 
 void SetTempo()
 {
+    // if the tempo changes, should playSamples be reset?
     beatTempo = (curTrack->event.data[0] << 16) | (curTrack->event.data[1] << 8) | curTrack->event.data[2];
-    CalculateRates();
+    SetTimer(&timerBeat, beatTempo, beatTicks);
 }
 
 void EndOfTrack()

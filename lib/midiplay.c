@@ -3,6 +3,7 @@
 // Copyright 2022 by Steve Clark
 
 #include "common.h"
+#include "timer.h"
 
 typedef struct
 {
@@ -32,12 +33,12 @@ int         musicSamplerate = 11025;
 int         musicLooping;
 int         musicPlaying = 0;
 
-int         rateAcc = 0, rateRem, phaseRate;
+TIMER       phaseRate;
 
 void Midiplay_Init(int samplerate)
 {
-    phaseRate = 65536 / samplerate;
-    rateRem = 65536 - phaseRate * samplerate;
+    SetTimer(&phaseRate, 65536, samplerate);
+    SetTimer(&timerSecond, 1000000, samplerate);
 
     musicSamplerate = samplerate;
 
@@ -99,7 +100,7 @@ int Midiplay_Load(void *data, int size, int looping)
 
     while (numTracksEnded < numTracks)
     {
-        UpdateTime();
+        UpdateScoreTime();
         MusicEvents();
         musicClock++;
     }
@@ -153,26 +154,32 @@ void Midiplay_Output(short *buffer, int length)
     {
         if (musicPlaying)
         {
-            if (playSamples == 0)
+            if (playFlag)
             {
-                UpdateTime();
+                UpdateScoreTime();
                 MusicEvents();
                 musicClock++;
-                playSamples = TickSamples();
+                playSamples += UpdateTimer(&timerBeat);
+                playFlag = 0;
             }
 
-            while (playSamples && length)
+            while (length)
             {
-                rate = phaseRate;
-                rateAcc += rateRem;
-                if (rateAcc >= musicSamplerate)
+                rate = UpdateTimer(&timerSecond);
+                if (playSamples < rate)
                 {
-                    rateAcc -= musicSamplerate;
-                    rate++;
+                    // is this a FIXME or TODO or just a NOTE?
+                    // there is the potential of lost/gained time here due
+                    //  to the rate returned by UpdateTimer being unused
+                    // however, any time discrepancy should be minimal
+                    // ideally, the value should be re-used
+                    playFlag = 1;
+                    break;
                 }
-                GenerateSample(buffer, rate);
+                playSamples -= rate;
+
+                GenerateSample(buffer, UpdateTimer(&phaseRate));
                 buffer += 2;
-                playSamples--;
                 length--;
             }
         }

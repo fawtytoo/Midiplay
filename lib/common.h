@@ -24,7 +24,7 @@ extern int  musicVolume;
 
 extern int  beatTicks, beatTempo;
 extern int  musicClock;
-extern int  playSamples;
+extern int  playSamples, playFlag;
 
 extern int  timeTicks;
 
@@ -35,10 +35,9 @@ int LoadMidTracks(int, BYTE *, int);
 void InitTracks(void);
 void TrackMusEvents(void);
 void TrackMidEvents(void);
-void UpdateTime(void);
+void UpdateScoreTime(void);
 void UpdateVolume(int);
 void GenerateSample(short *, short);
-int TickSamples(void);
 
 #endif
 

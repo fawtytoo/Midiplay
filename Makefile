@@ -6,10 +6,10 @@ TARGET = midiplay
 
 CC = gcc
 
-CFLAGS = -O -Wall
+CFLAGS = -O -Wall -MMD
 LDFLAGS = -lSDL2
 
-SOURCE = main.o lib/midiplay.o lib/control.o lib/event.o
+SOURCE = main.o lib/midiplay.o lib/control.o lib/event.o lib/timer.o
 
 all:	$(SOURCE)
 	$(CC) $(SOURCE) -o $(TARGET) $(LDFLAGS)
@@ -19,8 +19,11 @@ all:	$(SOURCE)
 
 clean:
 	rm -f $(SOURCE) $(TARGET)
+	rm -f lib/*.d *.d
 
 install:	all
 	cp $(TARGET) ~/.local/bin
+
+-include lib/*.d
 
 # Midiplay

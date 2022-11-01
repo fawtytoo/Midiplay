@@ -190,6 +190,8 @@ int main(int argc, char **argv)
     tcsetattr(STDIN_FILENO, TCSANOW, &termAttr);
     fcntl(STDIN_FILENO, F_SETFL, blockMode);
 
+    SDL_CloseAudioDevice(sdlAudio);
+
     SDL_Quit();
 
     return 0;

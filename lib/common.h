@@ -20,7 +20,6 @@ typedef void(*function)(void);
 
 extern int  musicSamplerate;
 extern int  musicPlaying, musicLooping;
-extern int  musicVolume;
 
 extern int  beatTicks, beatTempo;
 extern int  musicClock;

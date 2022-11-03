@@ -3,6 +3,8 @@
 // Copyright 2022 by Steve Clark
 
 #include "common.h"
+#include "synth.h"
+
 #include "event.h"
 
 #define NOTE_PLAY       1
@@ -80,7 +82,8 @@ typedef struct
     int     note;
     int     volume;
     UINT    phase, step;
-    short   left[2], right[2];
+    int     env_stage;
+    short   left, right;
     int     playing; // bit field
 } VOICE;
 
@@ -89,7 +92,7 @@ VOICE   midVoice[VOICES], *voiceHead = &midVoice[0], *voiceTail = &midVoice[VOIC
 
 EVENT   *eventData;
 
-UINT    midVolume = 0x100;
+UINT    midVolume = VOLUME;
 
 void ResetChannel(int channel)
 {
@@ -103,21 +106,17 @@ void VoiceOff(VOICE *voice, int state)
     if (voice->playing)
         return;
 
-    voice->left[0] = voice->left[1] = 0;
-    voice->right[0] = voice->right[1] = 0;
+    voice->env_stage = env_release;
 }
 
 void VoiceVolume(VOICE *voice)
 {
     UINT    volume;
 
-    volume = midVolume * volumeTable[voice->channel->volume * voice->channel->expression / 127] * volumeTable[voice->volume];
-    volume = (VOLUME * (volume >> 8)) >> 16;
+    volume = midVolume * volumeTable[voice->channel->volume * voice->channel->expression >> 7] * volumeTable[voice->volume] >> 16;
 
-    voice->left[0] = (volume * panTable[0][voice->channel->pan]) >> 8;
-    voice->right[0] = (volume * panTable[1][voice->channel->pan]) >> 8;
-    voice->left[1] = -voice->left[0];
-    voice->right[1] = -voice->right[0];
+    voice->left = volume * panTable[0][voice->channel->pan] >> 8;
+    voice->right = volume * panTable[1][voice->channel->pan] >> 8;
 }
 
 void UpdateVolume(int volume)
@@ -195,6 +194,7 @@ void Event_NoteOn()
 
             FrequencyStep(voice);
             voice->phase = 0;
+            voice->env_stage = env_attack;
 
             voice->playing = NOTE_PLAY | channel->sustain;
 
@@ -369,14 +369,15 @@ void GenerateSample(short *buffer, short rate)
 {
     VOICE   *voice;
     short   left = 0, right = 0;
-    short   phase;
+    short   phase, neg;
 
     for (voice = voiceHead; voice <= voiceTail; voice++)
     {
-        phase = voice->phase >> 31;
+        phase = Synth_GenPhase(voice->phase >> 21, &neg);
+        phase *= Synth_GenEnv(voice->env_stage) >> 8;
 
-        left += voice->left[phase];
-        right += voice->right[phase];
+        left += (voice->left * phase >> 9) ^ neg;
+        right += (voice->right * phase >> 9) ^ neg;
 
         voice->phase += voice->step * rate;
     }

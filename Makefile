@@ -9,7 +9,7 @@ CC = gcc
 CFLAGS = -O -Wall -MMD
 LDFLAGS = -lSDL2
 
-SOURCE = main.o lib/midiplay.o lib/control.o lib/event.o lib/timer.o
+SOURCE = main.o lib/midiplay.o lib/control.o lib/event.o lib/timer.o lib/synth.o
 
 all:	$(SOURCE)
 	$(CC) $(SOURCE) -o $(TARGET) $(LDFLAGS)

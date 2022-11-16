@@ -33,7 +33,7 @@ The library handles only a few basic events, but enough that would satisfy most 
 - Pitch Wheel (fixed 2 semitones up/down)
 - After Touch (key pressure)
 - After Touch (channel pressure)
-- Sustain (currently disabled)
+- Sustain
 - Tempo (MIDI only)
 - Channel Volume
 - Panning

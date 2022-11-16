@@ -7,8 +7,7 @@
 
 #include "event.h"
 
-#define NOTE_PLAY       1
-#define NOTE_SUSTAIN    2
+#define SUSTAIN(voice)  (voice->playing + voice->channel->sustain)
 
 // all frequencies are 16.16
 UINT    frequencyTable[128] =
@@ -84,7 +83,7 @@ typedef struct
     UINT    phase, step;
     int     env_stage;
     short   left, right;
-    int     playing; // bit field
+    int     playing;
 } VOICE;
 
 CHANNEL midChannel[16];
@@ -100,10 +99,10 @@ void ResetChannel(int channel)
     midChannel[channel].pan = 64;
 }
 
-void VoiceOff(VOICE *voice, int state)
+void VoiceOff(VOICE *voice)
 {
-    voice->playing &= state;
-    if (voice->playing)
+    voice->playing = 0;
+    if (SUSTAIN(voice))
         return;
 
     voice->env_stage = env_release;
@@ -126,7 +125,7 @@ void UpdateVolume(int volume)
     midVolume = volumeTable[volume];
 
     for (voice = voiceHead; voice <= voiceTail; voice++)
-        if (voice->playing)
+        if (SUSTAIN(voice))
             VoiceVolume(voice);
 }
 
@@ -135,7 +134,10 @@ void ResetVoices()
     VOICE   *voice;
 
     for (voice = voiceHead; voice <= voiceTail; voice++)
-        VoiceOff(voice, 0);
+    {
+        voice->channel = &midChannel[0];
+        VoiceOff(voice);
+    }
 }
 
 void ResetControls()
@@ -158,10 +160,10 @@ void Event_NoteOff()
     VOICE   *voice;
 
     for (voice = voiceHead; voice <= voiceTail; voice++)
-        if (voice->playing)
+        if (SUSTAIN(voice))
             if (voice->channel == channel)
                 if (voice->note == note)
-                    VoiceOff(voice, NOTE_SUSTAIN);
+                    VoiceOff(voice);
 }
 
 void FrequencyStep(VOICE *voice)
@@ -196,7 +198,7 @@ void Event_NoteOn()
             voice->phase = 0;
             voice->env_stage = env_attack;
 
-            voice->playing = NOTE_PLAY | channel->sustain;
+            voice->playing = 1;
 
             break;
         }
@@ -208,9 +210,9 @@ void Event_MuteNotes()
     VOICE   *voice;
 
     for (voice = voiceHead; voice <= voiceTail; voice++)
-        if (voice->playing)
+        if (SUSTAIN(voice))
             if (voice->channel == channel)
-                VoiceOff(voice, NOTE_SUSTAIN);
+                VoiceOff(voice);
 }
 
 void Event_PitchWheel()
@@ -221,7 +223,7 @@ void Event_PitchWheel()
     channel->bend = ((eventData->data[0] & 0x7f) | (eventData->data[1] << 7)) >> 6; // 8 bit values
 
     for (voice = voiceHead; voice <= voiceTail; voice++)
-        if (voice->playing)
+        if (SUSTAIN(voice) == 2) // don't bend a sustained note
             if (voice->channel == channel)
                 FrequencyStep(voice);
 }
@@ -234,7 +236,7 @@ void Event_Aftertouch()
     VOICE   *voice;
 
     for (voice = voiceHead; voice <= voiceTail; voice++)
-        if (voice->playing)
+        if (SUSTAIN(voice))
             if (voice->channel == channel)
                 if (voice->note == note)
                 {
@@ -250,15 +252,15 @@ void Event_Sustain()
     VOICE   *voice;
 
     // sustain: 0=off, 2=on
-    channel->sustain = ((sustain >> 1) | (sustain & 1)) << 1;
+    channel->sustain = sustain ? 2 : 0;
 
     if (channel->sustain != 0)
         return;
 
     for (voice = voiceHead; voice <= voiceTail; voice++)
-        if (voice->playing)
+        if (SUSTAIN(voice))
             if (voice->channel == channel)
-                VoiceOff(voice, NOTE_PLAY);
+                VoiceOff(voice);
 }
 
 void Event_ChannelVolume()
@@ -270,7 +272,7 @@ void Event_ChannelVolume()
     channel->volume = volume & 0x7f;
 
     for (voice = voiceHead; voice <= voiceTail; voice++)
-        if (voice->playing)
+        if (SUSTAIN(voice))
             if (voice->channel == channel)
                 VoiceVolume(voice);
 }
@@ -284,7 +286,7 @@ void Event_Pan()
     channel->pan = pan;
 
     for (voice = voiceHead; voice <= voiceTail; voice++)
-        if (voice->playing)
+        if (SUSTAIN(voice))
             if (voice->channel == channel)
                 VoiceVolume(voice);
 }
@@ -296,7 +298,7 @@ void Event_ChannelAftertouch()
     VOICE   *voice;
 
     for (voice = voiceHead; voice <= voiceTail; voice++)
-        if (voice->playing)
+        if (SUSTAIN(voice))
             if (voice->channel == channel)
             {
                 voice->volume = volume;
@@ -313,7 +315,7 @@ void Event_Expression()
     channel->expression = expression;
 
     for (voice = voiceHead; voice <= voiceTail; voice++)
-        if (voice->playing)
+        if (SUSTAIN(voice))
             if (voice->channel == channel)
                 VoiceVolume(voice);
 }
@@ -338,8 +340,8 @@ void Event_Message()
         ResetControls();
         break;
 
-      case MM_SUSTAIN: // FIXME
-        //Event_Sustain();
+      case MM_SUSTAIN:
+        Event_Sustain();
         break;
 
       case MM_AFTERTOUCH:
@@ -376,8 +378,8 @@ void GenerateSample(short *buffer, short rate)
         phase = Synth_GenPhase(voice->phase >> 21, &neg);
         phase *= Synth_GenEnv(voice->env_stage) >> 8;
 
-        left += (voice->left * phase >> 9) ^ neg;
-        right += (voice->right * phase >> 9) ^ neg;
+        left += (voice->left * phase >> 8) ^ neg;
+        right += (voice->right * phase >> 8) ^ neg;
 
         voice->phase += voice->step * rate;
     }

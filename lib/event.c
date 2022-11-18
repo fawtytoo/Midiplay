@@ -101,6 +101,7 @@ UINT    panTable[2][128] =
 
 typedef struct
 {
+    int     instrument;
     int     volume;
     int     pan;
     int     sustain;
@@ -128,6 +129,7 @@ UINT    midVolume = VOLUME;
 
 void ResetChannel(int channel)
 {
+    midChannel[channel].instrument = 0;
     midChannel[channel].volume = 100;
     midChannel[channel].pan = 64;
 }
@@ -337,7 +339,7 @@ void Event_Pan()
 void Event_ChannelAftertouch()
 {
     CHANNEL *channel = &midChannel[eventData->channel];
-    int     volume = eventData->data[1];
+    int     volume = eventData->data[0];
     VOICE   *voice;
 
     for (voice = voiceHead; voice <= voiceTail; voice++)
@@ -363,46 +365,52 @@ void Event_Expression()
                 VoiceVolume(voice);
 }
 
+void Event_ChangeInstrument()
+{
+    CHANNEL *channel = &midChannel[eventData->channel];
+
+    channel->instrument = eventData->data[1];
+}
+
 void Event_Message()
 {
     switch (eventData->data[0])
     {
-      case MM_VOLUME:
+      case CC_07:
         Event_ChannelVolume();
         break;
 
-      case MM_PAN:
+      case CC_0a:
         Event_Pan();
         break;
 
-      case MM_NOTEOFF:
-        Event_MuteNotes();
-        break;
-
-      case MM_CTRLOFF:
-        ResetControls();
-        break;
-
-      case MM_SUSTAIN: // FIXME
-        //Event_Sustain();
-        break;
-
-      case MM_AFTERTOUCH:
-        Event_ChannelAftertouch();
-        break;
-
-      case MM_EXPRESS:
+      case CC_0b:
         Event_Expression();
         break;
 
-      case MM_SOUNDOFF:
+      case CC_40: // FIXME
+        //Event_Sustain();
+        break;
+
+      case CC_78:
         ResetVoices();
         break;
 
-      case MM_INSTR:
-      case MM_MODWHEEL:
-      case MM_REG_LSB:
-      case MM_REG_MSB:
+      case CC_79:
+        ResetControls();
+        break;
+
+      case CC_7b:
+        Event_MuteNotes();
+        break;
+
+      case CC_80:
+        Event_ChangeInstrument();
+        break;
+
+      case CC_01:
+      case CC_64:
+      case CC_65:
         break;
 
       default:

@@ -8,44 +8,44 @@
 
 #define MICROSEC    1000000
 
-int     controllerMap[2][128] =
+int     controllerMapMus[128] =
 {
-    {   // mus
-        MM_INSTR, MM_NONE, MM_MODWHEEL, MM_VOLUME, MM_PAN, MM_EXPRESS, MM_NONE, MM_NONE,
-        MM_SUSTAIN, MM_NONE, MM_SOUNDOFF, MM_NOTEOFF, MM_NONE, MM_NONE, MM_CTRLOFF, MM_NONE,
-        MM_NONE, MM_NONE, MM_NONE, MM_NONE, MM_NONE, MM_NONE, MM_NONE, MM_NONE,
-        MM_NONE, MM_NONE, MM_NONE, MM_NONE, MM_NONE, MM_NONE, MM_NONE, MM_NONE,
-        MM_NONE, MM_NONE, MM_NONE, MM_NONE, MM_NONE, MM_NONE, MM_NONE, MM_NONE,
-        MM_NONE, MM_NONE, MM_NONE, MM_NONE, MM_NONE, MM_NONE, MM_NONE, MM_NONE,
-        MM_NONE, MM_NONE, MM_NONE, MM_NONE, MM_NONE, MM_NONE, MM_NONE, MM_NONE,
-        MM_NONE, MM_NONE, MM_NONE, MM_NONE, MM_NONE, MM_NONE, MM_NONE, MM_NONE,
-        MM_NONE, MM_NONE, MM_NONE, MM_NONE, MM_NONE, MM_NONE, MM_NONE, MM_NONE,
-        MM_NONE, MM_NONE, MM_NONE, MM_NONE, MM_NONE, MM_NONE, MM_NONE, MM_NONE,
-        MM_NONE, MM_NONE, MM_NONE, MM_NONE, MM_NONE, MM_NONE, MM_NONE, MM_NONE,
-        MM_NONE, MM_NONE, MM_NONE, MM_NONE, MM_NONE, MM_NONE, MM_NONE, MM_NONE,
-        MM_NONE, MM_NONE, MM_NONE, MM_NONE, MM_NONE, MM_NONE, MM_NONE, MM_NONE,
-        MM_NONE, MM_NONE, MM_NONE, MM_NONE, MM_NONE, MM_NONE, MM_NONE, MM_NONE,
-        MM_NONE, MM_NONE, MM_NONE, MM_NONE, MM_NONE, MM_NONE, MM_NONE, MM_NONE,
-        MM_NONE, MM_NONE, MM_NONE, MM_NONE, MM_NONE, MM_NONE, MM_NONE, MM_NONE
-    },
-    {   // midi
-        MM_NONE, MM_MODWHEEL, MM_NONE, MM_NONE, MM_NONE, MM_NONE, MM_NONE, MM_VOLUME,
-        MM_NONE, MM_NONE, MM_PAN, MM_EXPRESS, MM_NONE, MM_NONE, MM_NONE, MM_NONE,
-        MM_NONE, MM_NONE, MM_NONE, MM_NONE, MM_NONE, MM_NONE, MM_NONE, MM_NONE,
-        MM_NONE, MM_NONE, MM_NONE, MM_NONE, MM_NONE, MM_NONE, MM_NONE, MM_NONE,
-        MM_NONE, MM_NONE, MM_NONE, MM_NONE, MM_NONE, MM_NONE, MM_NONE, MM_NONE,
-        MM_NONE, MM_NONE, MM_NONE, MM_NONE, MM_NONE, MM_NONE, MM_NONE, MM_NONE,
-        MM_NONE, MM_NONE, MM_NONE, MM_NONE, MM_NONE, MM_NONE, MM_NONE, MM_NONE,
-        MM_NONE, MM_NONE, MM_NONE, MM_NONE, MM_NONE, MM_NONE, MM_NONE, MM_NONE,
-        MM_SUSTAIN, MM_NONE, MM_NONE, MM_NONE, MM_NONE, MM_NONE, MM_NONE, MM_NONE,
-        MM_NONE, MM_NONE, MM_NONE, MM_NONE, MM_NONE, MM_NONE, MM_NONE, MM_NONE,
-        MM_NONE, MM_NONE, MM_NONE, MM_NONE, MM_NONE, MM_NONE, MM_NONE, MM_NONE,
-        MM_NONE, MM_NONE, MM_NONE, MM_NONE, MM_NONE, MM_NONE, MM_NONE, MM_NONE,
-        MM_NONE, MM_NONE, MM_NONE, MM_NONE, MM_REG_LSB, MM_REG_MSB, MM_NONE, MM_NONE,
-        MM_NONE, MM_NONE, MM_NONE, MM_NONE, MM_NONE, MM_NONE, MM_NONE, MM_NONE,
-        MM_NONE, MM_NONE, MM_NONE, MM_NONE, MM_NONE, MM_NONE, MM_NONE, MM_NONE,
-        MM_SOUNDOFF, MM_CTRLOFF, MM_NONE, MM_NOTEOFF, MM_NONE, MM_NONE, MM_NONE, MM_NONE
-    }
+    CC_80, CC_NO, CC_01, CC_07, CC_0a, CC_0b, CC_NO, CC_NO,
+    CC_40, CC_NO, CC_78, CC_7b, CC_NO, CC_NO, CC_79, CC_NO,
+    CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO,
+    CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO,
+    CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO,
+    CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO,
+    CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO,
+    CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO,
+    CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO,
+    CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO,
+    CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO,
+    CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO,
+    CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO,
+    CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO,
+    CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO,
+    CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO
+};
+
+int     controllerMapMidi[128] =
+{
+    CC_NO, CC_01, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_07,
+    CC_NO, CC_NO, CC_0a, CC_0b, CC_NO, CC_NO, CC_NO, CC_NO,
+    CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO,
+    CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO,
+    CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO,
+    CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO,
+    CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO,
+    CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO,
+    CC_40, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO,
+    CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO,
+    CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO,
+    CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO,
+    CC_NO, CC_NO, CC_NO, CC_NO, CC_64, CC_65, CC_NO, CC_NO,
+    CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO,
+    CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO,
+    CC_78, CC_79, CC_NO, CC_7b, CC_NO, CC_NO, CC_NO, CC_NO
 };
 
 typedef struct
@@ -201,12 +201,12 @@ int GetMusEvent(int *time)
         break;
 
       case 0x30: // system event
-        curTrack->event.data[0] = controllerMap[0][*curTrack->pos++];
+        curTrack->event.data[0] = controllerMapMus[*curTrack->pos++];
         curTrack->midi.DoEvent = Event_Message;
         break;
 
       case 0x40: // change controller
-        curTrack->event.data[0] = controllerMap[0][*curTrack->pos++];
+        curTrack->event.data[0] = controllerMapMus[*curTrack->pos++];
         curTrack->event.data[1] = *curTrack->pos++;
         curTrack->midi.DoEvent = Event_Message;
         break;
@@ -269,21 +269,21 @@ void GetMidEvent()
         break;
 
       case 0xb0: // controller message
-        curTrack->event.data[0] = controllerMap[1][*curTrack->pos++];
+        curTrack->event.data[0] = controllerMapMidi[*curTrack->pos++];
         curTrack->event.data[1] = *curTrack->pos++;
         curTrack->midi.DoEvent = Event_Message;
         break;
 
       case 0xc0:
-        curTrack->event.data[0] = MM_INSTR;
+        // instrument number must be in 2nd byte of event.data
+        //  as that's where MUS puts it
         curTrack->event.data[1] = *curTrack->pos++;
-        curTrack->midi.DoEvent = Event_Message;
+        curTrack->midi.DoEvent = Event_ChangeInstrument;
         break;
 
       case 0xd0:
-        curTrack->event.data[0] = MM_AFTERTOUCH;
-        curTrack->event.data[1] = *curTrack->pos++;
-        curTrack->midi.DoEvent = Event_Message;
+        curTrack->event.data[0] = *curTrack->pos++;
+        curTrack->midi.DoEvent = Event_ChannelAftertouch;
         break;
 
       case 0xe0:

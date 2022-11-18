@@ -7,27 +7,60 @@
 
 #include "event.h"
 
-#define SUSTAIN(voice)  (voice->playing + voice->channel->sustain)
+#define NOTE_PLAY       1
+#define NOTE_SUSTAIN    2
 
 // all frequencies are 16.16
-UINT    frequencyTable[128] =
+UINT    frequencyTable[384] =
 {
-    0x00082d01, 0x0008a976, 0x00092d51, 0x0009b904, 0x000a4d05, 0x000ae9d3, 0x000b8ff4, 0x000c3ff6, 0x000cfa6f, 0x000dc000, 0x000e914f, 0x000f6f10, 0x00105a02, 0x001152ec, 0x00125aa2, 0x00137208,
-    0x00149a0a, 0x0015d3a6, 0x00171fe9, 0x00187fed, 0x0019f4df, 0x001b8000, 0x001d229e, 0x001ede22, 0x0020b404, 0x0022a5d7, 0x0024b545, 0x0026e410, 0x00293414, 0x002ba74d, 0x002e3fd2, 0x0030ffda,
-    0x0033e9c0, 0x00370000, 0x003a453d, 0x003dbc44, 0x00416809, 0x00454baf, 0x00496a8b, 0x004dc820, 0x00526829, 0x00574e9b, 0x005c7fa4, 0x0061ffb4, 0x0067d380, 0x006e0000, 0x00748a7b, 0x007b7887,
-    0x0082d012, 0x008a9760, 0x0092d516, 0x009b9041, 0x00a4d054, 0x00ae9d36, 0x00b8ff49, 0x00c3ff6a, 0x00cfa6ff, 0x00dc0000, 0x00e914f5, 0x00f6f110, 0x0105a025, 0x01152ec0, 0x0125aa2e, 0x01372082,
-    0x0149a0a7, 0x015d3a6d, 0x0171fe92, 0x0187fed4, 0x019f4e00, 0x01b80000, 0x01d229ec, 0x01ede220, 0x020b404a, 0x022a5d82, 0x024b545c, 0x026e4104, 0x0293414e, 0x02ba74db, 0x02e3fd24, 0x030ffda9,
-    0x033e9c02, 0x03700000, 0x03a453da, 0x03dbc43e, 0x04168094, 0x0454bb05, 0x0496a8b6, 0x04dc8208, 0x052682a0, 0x0574e9b2, 0x05c7fa49, 0x061ffb56, 0x067d37ff, 0x06e00000, 0x0748a7aa, 0x07b78887,
-    0x082d0128, 0x08a975ff, 0x092d517a, 0x09b90410, 0x0a4d0533, 0x0ae9d375, 0x0b8ff493, 0x0c3ff69b, 0x0cfa7011, 0x0dc00000, 0x0e914f54, 0x0f6f110e, 0x105a0250, 0x1152ebfe, 0x125aa2f4, 0x13720820,
-    0x149a0a66, 0x15d3a6ea, 0x171fe927, 0x187fed37, 0x19f4e022, 0x1b800000, 0x1d229efa, 0x1ede21c7, 0x20b404a1, 0x22a5d85c, 0x24b54583, 0x26e41040, 0x2934153e, 0x2ba74d5b, 0x2e3fd24f, 0x30ffdaf7
-};
-
-UINT    pitchBendTable[64] =
-{
-    0x0000, 0x02c9, 0x059b, 0x0874, 0x0b55, 0x0e3e, 0x1130, 0x1429, 0x172b, 0x1a35, 0x1d48, 0x2063, 0x2387, 0x26b4, 0x29e9, 0x2d28,
-    0x306f, 0x33c0, 0x371a, 0x3a7d, 0x3dea, 0x4160, 0x44e0, 0x486a, 0x4bfd, 0x4f9b, 0x5342, 0x56f4, 0x5ab0, 0x5e76, 0x6247, 0x6623,
-    0x6a09, 0x6dfb, 0x71f7, 0x75fe, 0x7a11, 0x7e2f, 0x8258, 0x868d, 0x8ace, 0x8f1a, 0x9373, 0x97d8, 0x9c49, 0xa0c6, 0xa550, 0xa9e6,
-    0xae89, 0xb33a, 0xb7f7, 0xbcc1, 0xc199, 0xc67f, 0xcb72, 0xd072, 0xd581, 0xda9e, 0xdfc9, 0xe502, 0xea4a, 0xefa1, 0xf507, 0xfa7c
+    0x00082d01, 0x000830c9, 0x00083493, 0x0008385e, 0x00083c2b, 0x00083ffa, 0x000843cb, 0x0008479e,
+    0x00084b72, 0x00084f48, 0x00085320, 0x000856fa, 0x00085ad5, 0x00085eb3, 0x00086292, 0x00086672,
+    0x00086a55, 0x00086e3a, 0x00087220, 0x00087608, 0x000879f2, 0x00087ddd, 0x000881cb, 0x000885ba,
+    0x000889ab, 0x00088d9e, 0x00089193, 0x00089589, 0x00089981, 0x00089d7c, 0x0008a178, 0x0008a576,
+    0x0008a976, 0x0008ad77, 0x0008b17b, 0x0008b580, 0x0008b987, 0x0008bd90, 0x0008c19b, 0x0008c5a8,
+    0x0008c9b6, 0x0008cdc7, 0x0008d1d9, 0x0008d5ee, 0x0008da04, 0x0008de1c, 0x0008e236, 0x0008e652,
+    0x0008ea70, 0x0008ee8f, 0x0008f2b1, 0x0008f6d4, 0x0008fafa, 0x0008ff21, 0x0009034a, 0x00090775,
+    0x00090ba2, 0x00090fd1, 0x00091402, 0x00091835, 0x00091c6a, 0x000920a1, 0x000924da, 0x00092914,
+    0x00092d51, 0x00093190, 0x000935d0, 0x00093a13, 0x00093e57, 0x0009429e, 0x000946e6, 0x00094b31,
+    0x00094f7d, 0x000953cb, 0x0009581c, 0x00095c6e, 0x000960c2, 0x00096519, 0x00096971, 0x00096dcc,
+    0x00097228, 0x00097686, 0x00097ae7, 0x00097f49, 0x000983ae, 0x00098814, 0x00098c7d, 0x000990e8,
+    0x00099554, 0x000999c3, 0x00099e34, 0x0009a2a7, 0x0009a71c, 0x0009ab92, 0x0009b00b, 0x0009b487,
+    0x0009b904, 0x0009bd83, 0x0009c204, 0x0009c687, 0x0009cb0d, 0x0009cf95, 0x0009d41e, 0x0009d8aa,
+    0x0009dd38, 0x0009e1c8, 0x0009e65a, 0x0009eaee, 0x0009ef84, 0x0009f41d, 0x0009f8b7, 0x0009fd54,
+    0x000a01f3, 0x000a0694, 0x000a0b37, 0x000a0fdc, 0x000a1483, 0x000a192d, 0x000a1dd8, 0x000a2286,
+    0x000a2736, 0x000a2be8, 0x000a309d, 0x000a3553, 0x000a3a0c, 0x000a3ec7, 0x000a4384, 0x000a4843,
+    0x000a4d05, 0x000a51c8, 0x000a568e, 0x000a5b56, 0x000a6021, 0x000a64ed, 0x000a69bc, 0x000a6e8d,
+    0x000a7360, 0x000a7835, 0x000a7d0d, 0x000a81e7, 0x000a86c3, 0x000a8ba1, 0x000a9082, 0x000a9565,
+    0x000a9a4a, 0x000a9f31, 0x000aa41b, 0x000aa907, 0x000aadf5, 0x000ab2e6, 0x000ab7d9, 0x000abcce,
+    0x000ac1c5, 0x000ac6bf, 0x000acbbb, 0x000ad0b9, 0x000ad5b9, 0x000adabc, 0x000adfc2, 0x000ae4c9,
+    0x000ae9d3, 0x000aeedf, 0x000af3ee, 0x000af8fe, 0x000afe12, 0x000b0327, 0x000b083f, 0x000b0d59,
+    0x000b1276, 0x000b1795, 0x000b1cb6, 0x000b21da, 0x000b2700, 0x000b2c29, 0x000b3154, 0x000b3681,
+    0x000b3bb1, 0x000b40e2, 0x000b4617, 0x000b4b4e, 0x000b5087, 0x000b55c3, 0x000b5b01, 0x000b6041,
+    0x000b6584, 0x000b6aca, 0x000b7012, 0x000b755c, 0x000b7aa9, 0x000b7ff8, 0x000b8549, 0x000b8a9e,
+    0x000b8ff4, 0x000b954d, 0x000b9aa9, 0x000ba007, 0x000ba567, 0x000baaca, 0x000bb02f, 0x000bb597,
+    0x000bbb02, 0x000bc06f, 0x000bc5de, 0x000bcb50, 0x000bd0c5, 0x000bd63c, 0x000bdbb5, 0x000be131,
+    0x000be6b0, 0x000bec31, 0x000bf1b5, 0x000bf73b, 0x000bfcc4, 0x000c024f, 0x000c07dd, 0x000c0d6e,
+    0x000c1300, 0x000c1896, 0x000c1e2e, 0x000c23c9, 0x000c2966, 0x000c2f07, 0x000c34a9, 0x000c3a4e,
+    0x000c3ff6, 0x000c45a1, 0x000c4b4e, 0x000c50fd, 0x000c56b0, 0x000c5c64, 0x000c621c, 0x000c67d6,
+    0x000c6d93, 0x000c7353, 0x000c7915, 0x000c7eda, 0x000c84a1, 0x000c8a6c, 0x000c9038, 0x000c9608,
+    0x000c9bda, 0x000ca1af, 0x000ca787, 0x000cad61, 0x000cb33e, 0x000cb91e, 0x000cbf00, 0x000cc4e5,
+    0x000ccace, 0x000cd0b8, 0x000cd6a5, 0x000cdc96, 0x000ce288, 0x000ce87e, 0x000cee77, 0x000cf472,
+    0x000cfa6f, 0x000d0070, 0x000d0674, 0x000d0c7a, 0x000d1283, 0x000d188f, 0x000d1e9d, 0x000d24af,
+    0x000d2ac3, 0x000d30da, 0x000d36f4, 0x000d3d11, 0x000d4330, 0x000d4952, 0x000d4f78, 0x000d559f,
+    0x000d5bca, 0x000d61f8, 0x000d6829, 0x000d6e5c, 0x000d7492, 0x000d7acb, 0x000d8108, 0x000d8747,
+    0x000d8d88, 0x000d93cd, 0x000d9a15, 0x000da05f, 0x000da6ad, 0x000dacfd, 0x000db350, 0x000db9a6,
+    0x000dc000, 0x000dc65b, 0x000dccbb, 0x000dd31c, 0x000dd981, 0x000ddfe9, 0x000de654, 0x000decc2,
+    0x000df333, 0x000df9a6, 0x000e001d, 0x000e0697, 0x000e0d13, 0x000e1393, 0x000e1a16, 0x000e209c,
+    0x000e2724, 0x000e2db0, 0x000e343f, 0x000e3ad1, 0x000e4166, 0x000e47fd, 0x000e4e98, 0x000e5537,
+    0x000e5bd7, 0x000e627c, 0x000e6923, 0x000e6fcd, 0x000e767a, 0x000e7d2b, 0x000e83de, 0x000e8a95,
+    0x000e914f, 0x000e980c, 0x000e9ecc, 0x000ea58f, 0x000eac55, 0x000eb31e, 0x000eb9eb, 0x000ec0bb,
+    0x000ec78d, 0x000ece63, 0x000ed53c, 0x000edc19, 0x000ee2f8, 0x000ee9db, 0x000ef0c1, 0x000ef7aa,
+    0x000efe96, 0x000f0585, 0x000f0c78, 0x000f136e, 0x000f1a67, 0x000f2163, 0x000f2862, 0x000f2f65,
+    0x000f366b, 0x000f3d74, 0x000f4481, 0x000f4b91, 0x000f52a4, 0x000f59ba, 0x000f60d4, 0x000f67f0,
+    0x000f6f10, 0x000f7634, 0x000f7d5b, 0x000f8485, 0x000f8bb2, 0x000f92e3, 0x000f9a17, 0x000fa14e,
+    0x000fa889, 0x000fafc7, 0x000fb708, 0x000fbe4d, 0x000fc595, 0x000fcce0, 0x000fd42f, 0x000fdb81,
+    0x000fe2d7, 0x000fea30, 0x000ff18c, 0x000ff8ec, 0x0010004f, 0x001007b6, 0x00100f20, 0x0010168d,
+    0x00101dfe, 0x00102573, 0x00102cea, 0x00103465, 0x00103be4, 0x00104366, 0x00104aec, 0x00105275
 };
 
 UINT    volumeTable[128] =
@@ -83,7 +116,7 @@ typedef struct
     UINT    phase, step;
     int     env_stage;
     short   left, right;
-    int     playing;
+    int     playing; // bit field
 } VOICE;
 
 CHANNEL midChannel[16];
@@ -99,10 +132,10 @@ void ResetChannel(int channel)
     midChannel[channel].pan = 64;
 }
 
-void VoiceOff(VOICE *voice)
+void VoiceOff(VOICE *voice, int state)
 {
-    voice->playing = 0;
-    if (SUSTAIN(voice))
+    voice->playing &= state;
+    if (voice->playing)
         return;
 
     voice->env_stage = env_release;
@@ -125,7 +158,7 @@ void UpdateVolume(int volume)
     midVolume = volumeTable[volume];
 
     for (voice = voiceHead; voice <= voiceTail; voice++)
-        if (SUSTAIN(voice))
+        if (voice->playing)
             VoiceVolume(voice);
 }
 
@@ -134,10 +167,7 @@ void ResetVoices()
     VOICE   *voice;
 
     for (voice = voiceHead; voice <= voiceTail; voice++)
-    {
-        voice->channel = &midChannel[0];
-        VoiceOff(voice);
-    }
+        VoiceOff(voice, 0);
 }
 
 void ResetControls()
@@ -147,7 +177,7 @@ void ResetControls()
     for (channel = 0; channel < 16; channel++)
     {
         midChannel[channel].sustain = 0;
-        midChannel[channel].bend = 128;
+        midChannel[channel].bend = 0;
         midChannel[channel].expression = 127;
     }
 }
@@ -160,23 +190,35 @@ void Event_NoteOff()
     VOICE   *voice;
 
     for (voice = voiceHead; voice <= voiceTail; voice++)
-        if (SUSTAIN(voice))
+        if (voice->playing)
             if (voice->channel == channel)
                 if (voice->note == note)
-                    VoiceOff(voice);
+                    VoiceOff(voice, NOTE_SUSTAIN);
 }
 
 void FrequencyStep(VOICE *voice)
 {
-    int     note = voice->note;
-    int     bend = voice->channel->bend;
-    UINT    diff;
+    int     index, octave;
 
-    note += (bend >> 6) - 2;
-    bend &= 63;
+    octave = voice->note / 12;
+    index = (voice->note % 12) * 32 + voice->channel->bend;
+    if (index < 0)
+    {
+        if (octave > 0)
+        {
+            octave--;
+            index += 384;
+        }
+        else
+            index = 0;
+    }
+    else if (index >= 384)
+    {
+        octave++;
+        index -= 384;
+    }
 
-    diff = (frequencyTable[note + 1] - frequencyTable[note]) >> 8;
-    voice->step = frequencyTable[note] + ((diff * pitchBendTable[bend]) >> 8);
+    voice->step = frequencyTable[index] << octave;
 }
 
 void Event_NoteOn()
@@ -198,7 +240,7 @@ void Event_NoteOn()
             voice->phase = 0;
             voice->env_stage = env_attack;
 
-            voice->playing = 1;
+            voice->playing = NOTE_PLAY | channel->sustain;
 
             break;
         }
@@ -210,20 +252,21 @@ void Event_MuteNotes()
     VOICE   *voice;
 
     for (voice = voiceHead; voice <= voiceTail; voice++)
-        if (SUSTAIN(voice))
+        if (voice->playing)
             if (voice->channel == channel)
-                VoiceOff(voice);
+                VoiceOff(voice, NOTE_SUSTAIN);
 }
 
 void Event_PitchWheel()
 {
     CHANNEL *channel = &midChannel[eventData->channel];
+    int     bend = ((eventData->data[0] & 0x7f) | (eventData->data[1] << 7));
     VOICE   *voice;
 
-    channel->bend = ((eventData->data[0] & 0x7f) | (eventData->data[1] << 7)) >> 6; // 8 bit values
+    channel->bend = (bend >> 7) - 64; // 7 bit values
 
     for (voice = voiceHead; voice <= voiceTail; voice++)
-        if (SUSTAIN(voice) == 2) // don't bend a sustained note
+        if (voice->playing)
             if (voice->channel == channel)
                 FrequencyStep(voice);
 }
@@ -236,7 +279,7 @@ void Event_Aftertouch()
     VOICE   *voice;
 
     for (voice = voiceHead; voice <= voiceTail; voice++)
-        if (SUSTAIN(voice))
+        if (voice->playing)
             if (voice->channel == channel)
                 if (voice->note == note)
                 {
@@ -252,15 +295,15 @@ void Event_Sustain()
     VOICE   *voice;
 
     // sustain: 0=off, 2=on
-    channel->sustain = sustain ? 2 : 0;
+    channel->sustain = ((sustain >> 1) | (sustain & 1)) << 1;
 
     if (channel->sustain != 0)
         return;
 
     for (voice = voiceHead; voice <= voiceTail; voice++)
-        if (SUSTAIN(voice))
+        if (voice->playing)
             if (voice->channel == channel)
-                VoiceOff(voice);
+                VoiceOff(voice, NOTE_PLAY);
 }
 
 void Event_ChannelVolume()
@@ -272,7 +315,7 @@ void Event_ChannelVolume()
     channel->volume = volume & 0x7f;
 
     for (voice = voiceHead; voice <= voiceTail; voice++)
-        if (SUSTAIN(voice))
+        if (voice->playing)
             if (voice->channel == channel)
                 VoiceVolume(voice);
 }
@@ -286,7 +329,7 @@ void Event_Pan()
     channel->pan = pan;
 
     for (voice = voiceHead; voice <= voiceTail; voice++)
-        if (SUSTAIN(voice))
+        if (voice->playing)
             if (voice->channel == channel)
                 VoiceVolume(voice);
 }
@@ -298,7 +341,7 @@ void Event_ChannelAftertouch()
     VOICE   *voice;
 
     for (voice = voiceHead; voice <= voiceTail; voice++)
-        if (SUSTAIN(voice))
+        if (voice->playing)
             if (voice->channel == channel)
             {
                 voice->volume = volume;
@@ -315,7 +358,7 @@ void Event_Expression()
     channel->expression = expression;
 
     for (voice = voiceHead; voice <= voiceTail; voice++)
-        if (SUSTAIN(voice))
+        if (voice->playing)
             if (voice->channel == channel)
                 VoiceVolume(voice);
 }
@@ -340,8 +383,8 @@ void Event_Message()
         ResetControls();
         break;
 
-      case MM_SUSTAIN:
-        Event_Sustain();
+      case MM_SUSTAIN: // FIXME
+        //Event_Sustain();
         break;
 
       case MM_AFTERTOUCH:
@@ -378,8 +421,8 @@ void GenerateSample(short *buffer, short rate)
         phase = Synth_GenPhase(voice->phase >> 21, &neg);
         phase *= Synth_GenEnv(voice->env_stage) >> 8;
 
-        left += (voice->left * phase >> 8) ^ neg;
-        right += (voice->right * phase >> 8) ^ neg;
+        left += (voice->left * phase >> 9) ^ neg;
+        right += (voice->right * phase >> 9) ^ neg;
 
         voice->phase += voice->step * rate;
     }

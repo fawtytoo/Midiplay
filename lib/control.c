@@ -169,10 +169,24 @@ int GetMusEvent(int *time)
       case 0x10: // play note
         data = *curTrack->pos++;
         curTrack->event.data[0] = (data & 0x7f);
-        curTrack->event.data[1] = data & 0x80 ? (*curTrack->pos++ & 0x7f) : prevVolume[curTrack->event.channel];
-        // should the volume be saved if the value is 0?
-        prevVolume[curTrack->event.channel] = curTrack->event.data[1];
-        curTrack->midi.DoEvent = curTrack->event.data[1] == 0 ? Event_NoteOff : Event_NoteOn;
+        if (data & 0x80)
+        {
+            curTrack->event.data[1] = *curTrack->pos++ & 0x7f;
+            // should the volume be saved if the value is 0?
+            prevVolume[curTrack->event.channel] = curTrack->event.data[1];
+        }
+        else
+        {
+            curTrack->event.data[1] = prevVolume[curTrack->event.channel];
+        }
+        if (curTrack->event.data[1] == 0)
+        {
+            curTrack->midi.DoEvent = Event_NoteOff;
+        }
+        else
+        {
+            curTrack->midi.DoEvent = Event_NoteOn;
+        }
         break;
 
       case 0x20: // pitch wheel (adjusted to 14 bit value)
@@ -196,7 +210,14 @@ int GetMusEvent(int *time)
         break;
 
       case 0x60: // score end
-        curTrack->midi.DoEvent = musicLooping ? InitTracks : EndOfTrack;
+        if (musicLooping)
+        {
+            curTrack->midi.DoEvent = InitTracks;
+        }
+        else
+        {
+            curTrack->midi.DoEvent = EndOfTrack;
+        }
         last = 1 - musicLooping;
         break;
 
@@ -240,7 +261,14 @@ void GetMidEvent()
       case 0x90:
         curTrack->event.data[0] = *curTrack->pos++;
         curTrack->event.data[1] = *curTrack->pos++;
-        curTrack->midi.DoEvent = curTrack->event.data[1] == 0 ? Event_NoteOff : Event_NoteOn;
+        if (curTrack->event.data[1] == 0)
+        {
+            curTrack->midi.DoEvent = Event_NoteOff;
+        }
+        else
+        {
+            curTrack->midi.DoEvent = Event_NoteOn;
+        }
         break;
 
       case 0xa0:

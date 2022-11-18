@@ -8,7 +8,8 @@
 
 #define MICROSEC    1000000
 
-int     controllerMapMus[128] =
+// controller map for MUS
+int     controllerMap[128] =
 {
     CC_80, CC_NO, CC_01, CC_07, CC_0a, CC_0b, CC_NO, CC_NO,
     CC_40, CC_NO, CC_78, CC_7b, CC_NO, CC_NO, CC_79, CC_NO,
@@ -26,26 +27,6 @@ int     controllerMapMus[128] =
     CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO,
     CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO,
     CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO
-};
-
-int     controllerMapMidi[128] =
-{
-    CC_NO, CC_01, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_07,
-    CC_NO, CC_NO, CC_0a, CC_0b, CC_NO, CC_NO, CC_NO, CC_NO,
-    CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO,
-    CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO,
-    CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO,
-    CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO,
-    CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO,
-    CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO,
-    CC_40, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO,
-    CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO,
-    CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO,
-    CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO,
-    CC_NO, CC_NO, CC_NO, CC_NO, CC_64, CC_65, CC_NO, CC_NO,
-    CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO,
-    CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO,
-    CC_78, CC_79, CC_NO, CC_7b, CC_NO, CC_NO, CC_NO, CC_NO
 };
 
 typedef struct
@@ -201,12 +182,12 @@ int GetMusEvent(int *time)
         break;
 
       case 0x30: // system event
-        curTrack->event.data[0] = controllerMapMus[*curTrack->pos++];
+        curTrack->event.data[0] = controllerMap[*curTrack->pos++];
         curTrack->midi.DoEvent = Event_Message;
         break;
 
       case 0x40: // change controller
-        curTrack->event.data[0] = controllerMapMus[*curTrack->pos++];
+        curTrack->event.data[0] = controllerMap[*curTrack->pos++];
         curTrack->event.data[1] = *curTrack->pos++;
         curTrack->midi.DoEvent = Event_Message;
         break;
@@ -269,7 +250,7 @@ void GetMidEvent()
         break;
 
       case 0xb0: // controller message
-        curTrack->event.data[0] = controllerMapMidi[*curTrack->pos++];
+        curTrack->event.data[0] = *curTrack->pos++;
         curTrack->event.data[1] = *curTrack->pos++;
         curTrack->midi.DoEvent = Event_Message;
         break;

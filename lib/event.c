@@ -125,8 +125,6 @@ VOICE   midVoice[VOICES], *voiceHead = &midVoice[0], *voiceTail = &midVoice[VOIC
 
 EVENT   *eventData;
 
-UINT    midVolume = VOLUME;
-
 void ResetChannel(int channel)
 {
     midChannel[channel].instrument = 0;
@@ -147,21 +145,10 @@ void VoiceVolume(VOICE *voice)
 {
     UINT    volume;
 
-    volume = midVolume * volumeTable[voice->channel->volume * voice->channel->expression >> 7] * volumeTable[voice->volume] >> 16;
+    volume = VOLUME * volumeTable[voice->channel->volume * voice->channel->expression >> 7] * volumeTable[voice->volume] >> 16;
 
     voice->left = volume * panTable[0][voice->channel->pan] >> 8;
     voice->right = volume * panTable[1][voice->channel->pan] >> 8;
-}
-
-void UpdateVolume(int volume)
-{
-    VOICE   *voice;
-
-    midVolume = volumeTable[volume];
-
-    for (voice = voiceHead; voice <= voiceTail; voice++)
-        if (voice->playing)
-            VoiceVolume(voice);
 }
 
 void ResetVoices()

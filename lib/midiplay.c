@@ -32,6 +32,7 @@ int         musicInit = 0;
 int         musicSamplerate = 11025;
 int         musicLooping;
 int         musicPlaying = 0;
+int         musicVolume = 0x100;
 
 TIMER       phaseRate;
 
@@ -130,7 +131,7 @@ void Midiplay_SetVolume(int volume)
     else if (volume > 127)
         volume = 127;
 
-    UpdateVolume(volume);
+    musicVolume = volumeTable[volume];
 }
 
 int Midiplay_IsPlaying()
@@ -144,9 +145,10 @@ int Midiplay_IsPlaying()
     return 0;
 }
 
-void Midiplay_Output(short *buffer, int length)
+void Midiplay_Output(short *output, int length)
 {
-    int rate;
+    short   buffer[2];
+    int     rate;
 
     length /= 2; // 1 sample = left + right
 
@@ -179,14 +181,16 @@ void Midiplay_Output(short *buffer, int length)
                 playSamples -= rate;
 
                 GenerateSample(buffer, UpdateTimer(&phaseRate));
-                buffer += 2;
+                output[0] = buffer[0] * musicVolume >> 8;
+                output[1] = buffer[1] * musicVolume >> 8;
+                output += 2;
                 length--;
             }
         }
         else
         {
-            *buffer++ = 0;
-            *buffer++ = 0;
+            *output++ = 0;
+            *output++ = 0;
             length--;
         }
     }

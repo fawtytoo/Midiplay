@@ -29,13 +29,14 @@ extern int  timeTicks;
 
 extern int  numTracks, numTracksEnded;
 
+extern UINT volumeTable[];
+
 void LoadMusTrack(BYTE *);
 int LoadMidTracks(int, BYTE *, int);
 void InitTracks(void);
 void TrackMusEvents(void);
 void TrackMidEvents(void);
 void UpdateScoreTime(void);
-void UpdateVolume(int);
 void GenerateSample(short *, short);
 
 #endif

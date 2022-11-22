@@ -42,7 +42,7 @@ typedef struct
     int     done;
 } TRACK;
 
-TRACK   midTrack[65536], *curTrack;
+TRACK   midTrack[65536], *curTrack, *endTrack;
 int     numTracks, numTracksEnded;
 
 BYTE    prevVolume[16]; // last known note volume on channel
@@ -52,8 +52,6 @@ int     playSamples, playFlag;
 int     musicClock;
 
 int     timeTicks, timeTempo;
-
-int     oldTrack = 0;
 
 void UpdateScoreTime()
 {
@@ -126,9 +124,6 @@ void EndOfMidiTrack()
 
     InitTracks();
     // at this point we need to parse a new event from track 0
-    // but we may be in the middle of several tracks
-    // this is some hack! but it's more straight forward
-    oldTrack = 0;
     curTrack = &midTrack[0];
     // eventData does not need to be set
 }
@@ -344,34 +339,33 @@ void TrackMusEvents()
 
 void TrackMidEvents()
 {
-    int     track, ticks;
+    int     ticks;
 
-    for (track = 0; track < numTracks; track++)
+    curTrack = &midTrack[0];
+
+    do
     {
-        curTrack = &midTrack[track];
+        if (curTrack->clock == musicClock)
+        {
+            do
+            {
+                eventData = &curTrack->event;
 
-        if (curTrack->clock > musicClock)
-            continue;
+                curTrack->midi.DoEvent();
 
-        eventData = &curTrack->event;
-        oldTrack = track;
+                if (curTrack->done)
+                    break;
 
-        curTrack->midi.DoEvent();
+                ticks = GetLength();
+                curTrack->clock += ticks;
+                GetMidEvent();
+            }
+            while (ticks == 0);
+        }
 
-        // when all tracks have ended, this will be set to track 0
-        track = oldTrack;
-
-        if (curTrack->done)
-            continue;
-
-        ticks = GetLength();
-        curTrack->clock += ticks;
-        GetMidEvent();
-
-        // a bit of hacking here to avoid a while loop
-        if (ticks == 0)
-            track--;
+        curTrack++;
     }
+    while (curTrack <= endTrack);
 }
 
 void LoadMusTrack(BYTE *data)
@@ -410,6 +404,7 @@ int LoadMidTracks(int count, BYTE *data, int size)
     }
 
     numTracks = count;
+    endTrack = &midTrack[numTracks - 1];
 
     return 0;
 }

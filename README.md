@@ -3,7 +3,7 @@
 ## A functional MUS/MIDI library/player.
 Currently for Linux only.
 The library is written in pure C with no dependencies.
-The player uses the SDL2 library for audio output.
+The player uses the SDL library for audio output.
 
 This project can play both MUS and MIDI files due to their similar structure. MIDI type 0 & 1 files are supported; type 2 is unknown due to lack of suitable files to test with. Similarly, Midiplay does not handle the SMPTE format.
 

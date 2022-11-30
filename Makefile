@@ -7,7 +7,7 @@ TARGET = midiplay
 CC = gcc
 
 CFLAGS = -O -Wall -MMD
-LDFLAGS = -lSDL2
+LDFLAGS = -lSDL
 
 SOURCE = main.o lib/midiplay.o lib/control.o lib/event.o lib/timer.o lib/synth.o
 

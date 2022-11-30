@@ -2,7 +2,7 @@
 
 // Copyright 2022 by Steve Clark
 
-#include <SDL2/SDL.h>
+#include <SDL/SDL.h>
 
 #include <sys/stat.h>
 #include <stdlib.h>
@@ -38,7 +38,6 @@ int digits(int number, int count)
 
 int main(int argc, char **argv)
 {
-    SDL_AudioDeviceID   sdlAudio;
     SDL_AudioSpec       want;
 
     struct termios      termAttr;
@@ -77,8 +76,8 @@ int main(int argc, char **argv)
     want.callback = sdlCallback;
     want.userdata = Midiplay_Output;
 
-    sdlAudio = SDL_OpenAudioDevice(NULL, 0, &want, NULL, 0);
-    SDL_PauseAudioDevice(sdlAudio, 0);
+    SDL_OpenAudio(&want, NULL);
+    SDL_PauseAudio(0);
 
     Midiplay_Init(SAMPLERATE);
 
@@ -190,7 +189,7 @@ int main(int argc, char **argv)
     tcsetattr(STDIN_FILENO, TCSANOW, &termAttr);
     fcntl(STDIN_FILENO, F_SETFL, blockMode);
 
-    SDL_CloseAudioDevice(sdlAudio);
+    SDL_CloseAudio();
 
     SDL_Quit();
 

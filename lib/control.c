@@ -130,14 +130,27 @@ void EndOfMidiTrack()
 
 UINT GetLength()
 {
-    UINT    length = 0;
+    UINT    length;
     BYTE    data;
 
-    do
+    // unrolled
+    data = *curTrack->pos++;
+    length = (data & 127);
+    if (data & 128)
     {
         data = *curTrack->pos++;
         length = (length << 7) | (data & 127);
-    } while (data & 128);
+        if (data & 128)
+        {
+            data = *curTrack->pos++;
+            length = (length << 7) | (data & 127);
+            if (data & 128)
+            {
+                data = *curTrack->pos++;
+                length = (length << 7) | (data & 127);
+            }
+        }
+    }
 
     return length;
 }

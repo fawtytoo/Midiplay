@@ -29,7 +29,6 @@ function    MusicEvents;
 
 int         musicInit = 0;
 
-int         musicSamplerate = 11025;
 int         musicLooping;
 int         musicPlaying = 0;
 int         musicVolume = 0x100;
@@ -40,8 +39,6 @@ void Midiplay_Init(int samplerate)
 {
     SetTimer(&phaseRate, 65536, samplerate);
     SetTimer(&timerSecond, 1000000, samplerate);
-
-    musicSamplerate = samplerate;
 
     musicInit = 1;
 }

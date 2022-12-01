@@ -18,7 +18,6 @@ typedef unsigned int    UINT;
 
 typedef void(*function)(void);
 
-extern int  musicSamplerate;
 extern int  musicPlaying, musicLooping;
 
 extern int  beatTicks, beatTempo;
@@ -31,6 +30,7 @@ extern int  numTracks, numTracksEnded;
 
 extern UINT volumeTable[];
 
+int MidiChunkCheck(BYTE *, char *, int *);
 void LoadMusTrack(BYTE *);
 int LoadMidTracks(int, BYTE *, int);
 void InitTracks(void);

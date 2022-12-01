@@ -29,6 +29,8 @@ int     controllerMap[128] =
     CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO
 };
 
+typedef void (*DOEVENT)(void);
+
 typedef struct
 {
     BYTE    *data, *pos;
@@ -36,7 +38,7 @@ typedef struct
     struct
     {
         BYTE        running;
-        function    DoEvent;
+        DOEVENT     DoEvent;
     } midi;
     EVENT   event;
     int     done;
@@ -52,6 +54,8 @@ int     playSamples, playFlag;
 int     musicClock;
 
 int     timeTicks, timeTempo;
+
+DOEVENT MusicEvents;
 
 void UpdateScoreTime()
 {
@@ -381,6 +385,13 @@ void TrackMidEvents()
     while (curTrack <= endTrack);
 }
 
+void UpdateEvents()
+{
+    UpdateScoreTime();
+    MusicEvents();
+    musicClock++;
+}
+
 void LoadMusTrack(BYTE *data)
 {
     midTrack[0].data = data;
@@ -388,6 +399,8 @@ void LoadMusTrack(BYTE *data)
     eventData = &curTrack->event;
 
     numTracks = 1;
+
+    MusicEvents = TrackMusEvents;
 }
 
 int LoadMidTracks(int count, BYTE *data, int size)
@@ -418,6 +431,8 @@ int LoadMidTracks(int count, BYTE *data, int size)
 
     numTracks = count;
     endTrack = &midTrack[numTracks - 1];
+
+    MusicEvents = TrackMidEvents;
 
     return 0;
 }

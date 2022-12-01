@@ -16,8 +16,6 @@ typedef unsigned short  WORD;
 typedef unsigned char   BYTE;
 typedef unsigned int    UINT;
 
-typedef void(*function)(void);
-
 extern int  musicPlaying, musicLooping;
 
 extern int  beatTicks, beatTempo;
@@ -30,13 +28,10 @@ extern int  numTracks, numTracksEnded;
 
 extern UINT volumeTable[];
 
-int MidiChunkCheck(BYTE *, char *, int *);
 void LoadMusTrack(BYTE *);
 int LoadMidTracks(int, BYTE *, int);
 void InitTracks(void);
-void TrackMusEvents(void);
-void TrackMidEvents(void);
-void UpdateScoreTime(void);
+void UpdateEvents(void);
 void GenerateSample(short *, short);
 
 #endif

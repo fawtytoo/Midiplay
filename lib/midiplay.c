@@ -25,8 +25,6 @@ typedef struct
     WORD    ppqn;
 } __attribute__ ((packed)) HDR_MID;
 
-function    MusicEvents;
-
 int         musicInit = 0;
 
 int         musicLooping;
@@ -73,8 +71,6 @@ int Midiplay_Load(void *data, int size, int looping)
         beatTicks = 70;
         if (hdrMus->ppqn > 0)
             beatTicks = hdrMus->ppqn;
-
-        MusicEvents = TrackMusEvents;
     }
     else if (hdrMid->id[0] == 'M' && hdrMid->id[1] == 'T' && hdrMid->id[2] == 'h' && hdrMid->id[3] == 'd')
     {
@@ -87,8 +83,6 @@ int Midiplay_Load(void *data, int size, int looping)
 
         if (LoadMidTracks(__builtin_bswap16(hdrMid->ntracks), data + sizeof(HDR_MID), size - sizeof(HDR_MID)) == 1)
             return 0; // track header failed
-
-        MusicEvents = TrackMidEvents;
     }
     else
         return 0;
@@ -97,11 +91,7 @@ int Midiplay_Load(void *data, int size, int looping)
     musicLooping = 0;
 
     while (numTracksEnded < numTracks)
-    {
-        UpdateScoreTime();
-        MusicEvents();
-        musicClock++;
-    }
+        UpdateEvents();
 
     musicLooping = looping;
     musicInit = 2;
@@ -155,9 +145,7 @@ void Midiplay_Output(short *output, int length)
         {
             if (playFlag)
             {
-                UpdateScoreTime();
-                MusicEvents();
-                musicClock++;
+                UpdateEvents();
                 playSamples += UpdateTimer(&timerBeat);
                 playFlag = 0;
             }

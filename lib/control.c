@@ -247,6 +247,7 @@ int GetMusEvent(int *time)
 void GetMidEvent()
 {
     BYTE    data, event = 0x0;
+    UINT    length;
 
     curTrack->DoEvent = EventNull;
 
@@ -328,7 +329,8 @@ void GetMidEvent()
             }
         }
 
-        curTrack->pos += GetLength();
+        length = GetLength();
+        curTrack->pos += length;
         return; // don't want to affect running events
     }
 

@@ -35,11 +35,8 @@ typedef struct
 {
     BYTE    *data, *pos;
     int     clock; // accumulator
-    struct
-    {
-        BYTE        running;
-        DOEVENT     DoEvent;
-    } midi;
+    BYTE    running;
+    DOEVENT DoEvent;
     EVENT   event;
     int     done;
 } TRACK;
@@ -76,7 +73,7 @@ void InitTracks()
         midTrack[track].pos = midTrack[track].data;
         midTrack[track].done = 0;
         midTrack[track].clock = 0;
-        midTrack[track].midi.DoEvent = EventNull;
+        midTrack[track].DoEvent = EventNull;
     }
 
     for (channel = 0; channel < 16; channel++)
@@ -116,7 +113,7 @@ void EndOfTrack()
 void EndOfMidiTrack()
 {
     EndOfTrack();
-    curTrack->midi.DoEvent = EventNull;
+    curTrack->DoEvent = EventNull;
     if (numTracksEnded < numTracks)
         return;
 
@@ -163,7 +160,7 @@ int GetMusEvent(int *time)
 {
     BYTE    data, last;
 
-    curTrack->midi.DoEvent = EventNull;
+    curTrack->DoEvent = EventNull;
 
     data = *curTrack->pos++;
     curTrack->event.channel = data & 0x0f;
@@ -175,7 +172,7 @@ int GetMusEvent(int *time)
     {
       case 0x00: // release note
         curTrack->event.data[0] = (*curTrack->pos++ & 0x7f);
-        curTrack->midi.DoEvent = Event_NoteOff;
+        curTrack->DoEvent = Event_NoteOff;
         break;
 
       case 0x10: // play note
@@ -193,29 +190,29 @@ int GetMusEvent(int *time)
         }
         if (curTrack->event.data[1] == 0)
         {
-            curTrack->midi.DoEvent = Event_NoteOff;
+            curTrack->DoEvent = Event_NoteOff;
         }
         else
         {
-            curTrack->midi.DoEvent = Event_NoteOn;
+            curTrack->DoEvent = Event_NoteOn;
         }
         break;
 
       case 0x20: // pitch wheel (adjusted to 14 bit value)
         curTrack->event.data[0] = (*curTrack->pos & 0x1) << 6;
         curTrack->event.data[1] = *curTrack->pos++ >> 1;
-        curTrack->midi.DoEvent = Event_PitchWheel;
+        curTrack->DoEvent = Event_PitchWheel;
         break;
 
       case 0x30: // system event
         curTrack->event.data[0] = controllerMap[*curTrack->pos++];
-        curTrack->midi.DoEvent = Event_Message;
+        curTrack->DoEvent = Event_Message;
         break;
 
       case 0x40: // change controller
         curTrack->event.data[0] = controllerMap[*curTrack->pos++];
         curTrack->event.data[1] = *curTrack->pos++;
-        curTrack->midi.DoEvent = Event_Message;
+        curTrack->DoEvent = Event_Message;
         break;
 
       case 0x50: // end of measure?
@@ -224,11 +221,11 @@ int GetMusEvent(int *time)
       case 0x60: // score end
         if (musicLooping)
         {
-            curTrack->midi.DoEvent = InitTracks;
+            curTrack->DoEvent = InitTracks;
         }
         else
         {
-            curTrack->midi.DoEvent = EndOfTrack;
+            curTrack->DoEvent = EndOfTrack;
         }
         last = 1 - musicLooping;
         break;
@@ -239,7 +236,7 @@ int GetMusEvent(int *time)
         break;
     }
 
-    curTrack->midi.DoEvent();
+    curTrack->DoEvent();
 
     if (last & 0x80)
         *time = GetLength();
@@ -251,14 +248,14 @@ void GetMidEvent()
 {
     BYTE    data, event = 0x0;
 
-    curTrack->midi.DoEvent = EventNull;
+    curTrack->DoEvent = EventNull;
 
     data = *curTrack->pos;
 
     if (data & 0x80)
         event = *curTrack->pos++;
     else
-        data = curTrack->midi.running;
+        data = curTrack->running;
 
     curTrack->event.channel = data & 0x0f;
 
@@ -267,7 +264,7 @@ void GetMidEvent()
       case 0x80:
         curTrack->event.data[0] = *curTrack->pos++;
         curTrack->event.data[1] = *curTrack->pos++;
-        curTrack->midi.DoEvent = Event_NoteOff;
+        curTrack->DoEvent = Event_NoteOff;
         break;
 
       case 0x90:
@@ -275,42 +272,42 @@ void GetMidEvent()
         curTrack->event.data[1] = *curTrack->pos++;
         if (curTrack->event.data[1] == 0)
         {
-            curTrack->midi.DoEvent = Event_NoteOff;
+            curTrack->DoEvent = Event_NoteOff;
         }
         else
         {
-            curTrack->midi.DoEvent = Event_NoteOn;
+            curTrack->DoEvent = Event_NoteOn;
         }
         break;
 
       case 0xa0:
         curTrack->event.data[0] = *curTrack->pos++;
         curTrack->event.data[1] = *curTrack->pos++;
-        curTrack->midi.DoEvent = Event_Aftertouch;
+        curTrack->DoEvent = Event_Aftertouch;
         break;
 
       case 0xb0: // controller message
         curTrack->event.data[0] = *curTrack->pos++;
         curTrack->event.data[1] = *curTrack->pos++;
-        curTrack->midi.DoEvent = Event_Message;
+        curTrack->DoEvent = Event_Message;
         break;
 
       case 0xc0:
         // instrument number must be in 2nd byte of event.data
         //  as that's where MUS puts it
         curTrack->event.data[1] = *curTrack->pos++;
-        curTrack->midi.DoEvent = Event_ChangeInstrument;
+        curTrack->DoEvent = Event_ChangeInstrument;
         break;
 
       case 0xd0:
         curTrack->event.data[0] = *curTrack->pos++;
-        curTrack->midi.DoEvent = Event_ChannelAftertouch;
+        curTrack->DoEvent = Event_ChannelAftertouch;
         break;
 
       case 0xe0:
         curTrack->event.data[0] = *curTrack->pos++;
         curTrack->event.data[1] = *curTrack->pos++;
-        curTrack->midi.DoEvent = Event_PitchWheel;
+        curTrack->DoEvent = Event_PitchWheel;
         break;
 
       case 0xf0:
@@ -319,7 +316,7 @@ void GetMidEvent()
             data = *curTrack->pos++;
             if (data == 0x2f) // end of track
             {
-                curTrack->midi.DoEvent = EndOfMidiTrack;
+                curTrack->DoEvent = EndOfMidiTrack;
                 return;
             }
             else if (data == 0x51 && *curTrack->pos == 3)
@@ -327,7 +324,7 @@ void GetMidEvent()
                 curTrack->event.data[0] = curTrack->pos[1];
                 curTrack->event.data[1] = curTrack->pos[2];
                 curTrack->event.data[2] = curTrack->pos[3];
-                curTrack->midi.DoEvent = SetTempo;
+                curTrack->DoEvent = SetTempo;
             }
         }
 
@@ -336,7 +333,7 @@ void GetMidEvent()
     }
 
     if (event & 0x80)
-        curTrack->midi.running = event;
+        curTrack->running = event;
 }
 
 void TrackMusEvents()
@@ -368,7 +365,7 @@ void TrackMidEvents()
             {
                 eventData = &curTrack->event;
 
-                curTrack->midi.DoEvent();
+                curTrack->DoEvent();
 
                 if (curTrack->done)
                     break;

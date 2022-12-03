@@ -5,25 +5,12 @@
 #include "common.h"
 #include "timer.h"
 
-typedef struct
-{
-    char    id[4];
-    WORD    scoreLen;
-    WORD    scoreStart;
-    WORD    priChannels;
-    WORD    secChannels;
-    WORD    numInstruments;
-    WORD    ppqn; // we're going to use this to specify ppqn, default 70
-} __attribute__ ((packed)) HDR_MUS;
+// header sizes in bytes
+#define MUS_HDRSIZE 16
+#define MID_HDRSIZE 14
 
-typedef struct
-{
-    char    id[4];
-    int     length;
-    WORD    type;
-    WORD    ntracks;
-    WORD    ppqn;
-} __attribute__ ((packed)) HDR_MID;
+#define LE16(a, b)  (a | (b << 8))
+#define BE16(a, b)  ((a << 8) | b)
 
 int         musicInit = 0;
 
@@ -43,8 +30,7 @@ void Midiplay_Init(int samplerate)
 
 int Midiplay_Load(void *data, int size, int looping)
 {
-    HDR_MUS *hdrMus;
-    HDR_MID *hdrMid;
+    BYTE    *hdr = (BYTE *)data;
 
     if (musicInit == 0)
         return 0;
@@ -55,33 +41,31 @@ int Midiplay_Load(void *data, int size, int looping)
     if (size < 4)
         return 0;
 
-    hdrMus = (HDR_MUS *)data;
-    hdrMid = (HDR_MID *)data;
-
-    if (hdrMus->id[0] == 'M' && hdrMus->id[1] == 'U' && hdrMus->id[2] == 'S' && hdrMus->id[3] == 0x1a)
+    if (hdr[0] == 'M' && hdr[1] == 'U' && hdr[2] == 'S' && hdr[3] == 0x1a)
     {
-        if (size < sizeof(HDR_MUS))
+        if (size < MUS_HDRSIZE)
             return 0;
 
-        if (size < hdrMus->scoreStart + hdrMus->scoreLen)
+        if (size < LE16(hdr[6], hdr[7]) + LE16(hdr[4], hdr[5]))
             return 0;
 
-        LoadMusTrack(data + hdrMus->scoreStart);
+        beatTicks = LE16(hdr[14], hdr[15]);
+        if (beatTicks == 0)
+            beatTicks = 70;
 
-        beatTicks = 70;
-        if (hdrMus->ppqn > 0)
-            beatTicks = hdrMus->ppqn;
+        LoadMusTrack(hdr + LE16(hdr[6], hdr[7]));
     }
-    else if (hdrMid->id[0] == 'M' && hdrMid->id[1] == 'T' && hdrMid->id[2] == 'h' && hdrMid->id[3] == 'd')
+    else if (hdr[0] == 'M' && hdr[1] == 'T' && hdr[2] == 'h' && hdr[3] == 'd')
     {
-        if (size < sizeof(HDR_MID))
+        if (size < MID_HDRSIZE)
             return 0;
 
-        beatTicks = __builtin_bswap16(hdrMid->ppqn);
+        beatTicks = BE16(hdr[12], hdr[13]);
         if (beatTicks < 0)
             return 0; // no support for SMPTE format yet
 
-        if (LoadMidTracks(__builtin_bswap16(hdrMid->ntracks), data + sizeof(HDR_MID), size - sizeof(HDR_MID)) == 1)
+        size -= MID_HDRSIZE;
+        if (LoadMidTracks(BE16(hdr[10], hdr[11]), &hdr[MID_HDRSIZE], size) == 1)
             return 0; // track header failed
     }
     else

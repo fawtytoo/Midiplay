@@ -412,12 +412,22 @@ int LoadMidTracks(int count, BYTE *data, int size)
         if (size < 8)
             return 1;
 
-        if (*(UINT *)data != ('M' | ('T' << 8) | ('r' << 16) | ('k' << 24)))
-            return 1; // invalid header
+        if (*data++ != 'M')
+            return 1;
 
-        data += 4;
-        length = __builtin_bswap32(*(UINT *)data);
-        data += 4;
+        if (*data++ != 'T')
+            return 1;
+
+        if (*data++ != 'r')
+            return 1;
+
+        if (*data++ != 'k')
+            return 1;
+
+        length = *data++;
+        length = (length << 8) | *data++;
+        length = (length << 8) | *data++;
+        length = (length << 8) | *data++;
 
         size -= 8;
         if (size < length)

@@ -115,7 +115,7 @@ int main(int argc, char **argv)
         fread(buffer, status.st_size, 1, file);
         fclose(file);
 
-        if (Midiplay_Load(buffer, status.st_size, looping))
+        if (Midiplay_Load(buffer, status.st_size))
         {
             if ((name = strrchr(argv[arg], '/')) == NULL)
                 name = argv[arg];

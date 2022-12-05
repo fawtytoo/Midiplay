@@ -12,10 +12,9 @@ void Midiplay_Init(int);
 // Midiplay_Load
 // data         Memory pointer to the music data
 // size         Size of the music data in bytes
-// looping      Whether the music will repeat (0 = once, 1 = repeating)
 
 // Returns 1 on success, 0 on failure
-int Midiplay_Load(void *, int, int);
+int Midiplay_Load(void *, int);
 
 // Midiplay_Play
 // playing      0 = pause, 1 = play
@@ -45,7 +44,7 @@ int Midiplay_IsPlaying(void);
 int Midiplay_Time(void);
 
 // Midiplay_Loop
-// Changes looping mode
+// Changes looping mode (0 = once, 1 = repeating)
 void Midiplay_Loop(int);
 
 // Midiplay_Restart

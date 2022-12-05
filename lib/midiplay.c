@@ -28,7 +28,7 @@ void Midiplay_Init(int samplerate)
     musicInit = 1;
 }
 
-int Midiplay_Load(void *data, int size, int looping)
+int Midiplay_Load(void *data, int size)
 {
     BYTE    *hdr = (BYTE *)data;
 
@@ -77,7 +77,6 @@ int Midiplay_Load(void *data, int size, int looping)
     while (numTracksEnded < numTracks)
         UpdateEvents();
 
-    musicLooping = looping;
     musicInit = 2;
 
     return 1;

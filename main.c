@@ -19,13 +19,11 @@
 #define SAMPLERATE      44100
 #define SAMPLECOUNT     2048
 
-typedef void (*cb_t)(short *, int);
-
-void sdlCallback(void *userdata, Uint8 *buffer, int length)
+void sdlCallback(void *unused, Uint8 *buffer, int length)
 {
-    cb_t        cb = userdata;
+    (void)unused;
 
-    cb((short *)buffer, length / 2);
+    Midiplay_Output((short *)buffer, length / 2);
 }
  
 int digits(int number, int count)
@@ -74,7 +72,6 @@ int main(int argc, char **argv)
     want.channels = 2;
     want.samples = SAMPLECOUNT;
     want.callback = sdlCallback;
-    want.userdata = Midiplay_Output;
 
     SDL_OpenAudio(&want, NULL);
     SDL_PauseAudio(0);

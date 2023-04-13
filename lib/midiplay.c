@@ -118,19 +118,17 @@ int Midiplay_IsPlaying()
 void Midiplay_Output(short *output, int length)
 {
     short   buffer[2];
-    int     rate;
 
     while (length)
     {
         if (musicPlaying)
         {
-            rate = UpdateTimer(&timerSecond);
-            if (playSamples < rate)
+            playSamples -= UpdateTimer(&timerSecond);
+            if (playSamples < 0)
             {
                 UpdateEvents();
                 playSamples += UpdateTimer(&timerBeat);
             }
-            playSamples -= rate;
 
             GenerateSample(buffer, UpdateTimer(&phaseRate));
             output[0] = buffer[0] * musicVolume >> 8;

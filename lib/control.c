@@ -47,7 +47,7 @@ int     numTracks, numTracksEnded;
 BYTE    prevVolume[16]; // last known note volume on channel
 
 int     beatTicks = 96, beatTempo = 500000;
-int     playSamples, playFlag;
+int     playSamples;
 int     musicClock;
 
 int     timeTicks, timeTempo;
@@ -62,7 +62,9 @@ void UpdateScoreTime()
 }
 
 // sometimes, you just want nothing to happen
-void EventNull() {}
+void DoNothing()
+{
+}
 
 void InitTracks()
 {
@@ -73,7 +75,7 @@ void InitTracks()
         midTrack[track].pos = midTrack[track].data;
         midTrack[track].done = 0;
         midTrack[track].clock = 0;
-        midTrack[track].DoEvent = EventNull;
+        midTrack[track].DoEvent = DoNothing;
     }
 
     for (channel = 0; channel < 16; channel++)
@@ -84,7 +86,6 @@ void InitTracks()
 
     musicClock = 0;
     playSamples = 0;
-    playFlag = 1;
 
     beatTempo = 500000;
     SetTimer(&timerBeat, beatTempo, beatTicks);
@@ -113,7 +114,7 @@ void EndOfTrack()
 void EndOfMidiTrack()
 {
     EndOfTrack();
-    curTrack->DoEvent = EventNull;
+    curTrack->DoEvent = DoNothing;
     if (numTracksEnded < numTracks)
         return;
 
@@ -160,7 +161,7 @@ int GetMusEvent(int *time)
 {
     BYTE    data, last;
 
-    curTrack->DoEvent = EventNull;
+    curTrack->DoEvent = DoNothing;
 
     data = *curTrack->pos++;
     curTrack->event.channel = data & 0x0f;
@@ -249,7 +250,7 @@ void GetMidEvent()
     BYTE    data, event = 0x0;
     UINT    length;
 
-    curTrack->DoEvent = EventNull;
+    curTrack->DoEvent = DoNothing;
 
     data = *curTrack->pos;
 

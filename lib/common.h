@@ -5,10 +5,6 @@
 #ifndef __COMMON_H__
 #define __COMMON_H__
 
-#ifndef NULL
-#define NULL    0
-#endif
-
 #define VOICES  24
 #define VOLUME  32760 / VOICES
 
@@ -20,7 +16,7 @@ extern int  musicPlaying, musicLooping;
 
 extern int  beatTicks, beatTempo;
 extern int  musicClock;
-extern int  playSamples, playFlag;
+extern int  playSamples;
 
 extern int  timeTicks;
 

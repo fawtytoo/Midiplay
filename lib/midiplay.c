@@ -120,47 +120,30 @@ void Midiplay_Output(short *output, int length)
     short   buffer[2];
     int     rate;
 
-    length /= 2; // 1 sample = left + right
-
     while (length)
     {
         if (musicPlaying)
         {
-            if (playFlag)
+            rate = UpdateTimer(&timerSecond);
+            if (playSamples < rate)
             {
                 UpdateEvents();
                 playSamples += UpdateTimer(&timerBeat);
-                playFlag = 0;
             }
+            playSamples -= rate;
 
-            while (length)
-            {
-                rate = UpdateTimer(&timerSecond);
-                if (playSamples < rate)
-                {
-                    // is this a FIXME or TODO or just a NOTE?
-                    // there is the potential of lost/gained time here due
-                    //  to the rate returned by UpdateTimer being unused
-                    // however, any time discrepancy should be minimal
-                    // ideally, the value should be re-used
-                    playFlag = 1;
-                    break;
-                }
-                playSamples -= rate;
-
-                GenerateSample(buffer, UpdateTimer(&phaseRate));
-                output[0] = buffer[0] * musicVolume >> 8;
-                output[1] = buffer[1] * musicVolume >> 8;
-                output += 2;
-                length--;
-            }
+            GenerateSample(buffer, UpdateTimer(&phaseRate));
+            output[0] = buffer[0] * musicVolume >> 8;
+            output[1] = buffer[1] * musicVolume >> 8;
         }
         else
         {
-            *output++ = 0;
-            *output++ = 0;
-            length--;
+            output[0] = 0;
+            output[1] = 0;
         }
+
+        output += 2;
+        length -= 2;
     }
 }
 

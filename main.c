@@ -14,10 +14,10 @@
 
 #include "lib/midiplay.h"
 
-#define ERROR           printf("%s %s\n\r", argv[arg], strerror(errno))
+#define ERROR       printf("%s %s\n\r", argv[arg], strerror(errno))
 
-#define SAMPLERATE      44100
-#define SAMPLECOUNT     2048
+#define SAMPLERATE  44100
+#define SAMPLECOUNT 2048
 
 void sdlCallback(void *unused, Uint8 *buffer, int length)
 {
@@ -29,33 +29,35 @@ void sdlCallback(void *unused, Uint8 *buffer, int length)
 int digits(int number, int count)
 {
     if (number > 9)
+    {
         count = digits(number / 10, count + 1);
+    }
 
     return count;
 }
 
 int main(int argc, char **argv)
 {
-    SDL_AudioSpec       want;
+    SDL_AudioSpec   want;
 
-    struct termios      termAttr;
-    tcflag_t            localMode, outputMode;
-    int                 blockMode;
+    struct termios  termAttr;
+    tcflag_t        localMode, outputMode;
+    int             blockMode;
 
-    struct stat         status;
-    FILE                *file;
-    char                *buffer;
+    struct stat     status;
+    FILE            *file;
+    char            *buffer;
 
-    int                 arg;
-    char                *name;
+    int             arg;
+    char            *name;
 
-    int                 length, count;
+    int             length, count;
 
-    int                 looping = 0;
-    int                 playing = 1;
-    int                 volume = 100;
+    int             looping = 0;
+    int             playing = 1;
+    int             volume = 100;
 
-    char                key;
+    char            key;
 
     if (argc < 2)
     {
@@ -115,9 +117,13 @@ int main(int argc, char **argv)
         if (Midiplay_Load(buffer, status.st_size))
         {
             if ((name = strrchr(argv[arg], '/')) == NULL)
+            {
                 name = argv[arg];
+            }
             else
+            {
                 name++;
+            }
 
             count = digits(argc - 1, 1);
             printf("Playing %*i/%i: %s\r\n", count, arg, argc - 1, name);
@@ -144,30 +150,28 @@ int main(int argc, char **argv)
                     Midiplay_Play(playing);
                 }
                 else if (key == 'n')
+                {
                     break;
+                }
                 else if (key == 'q')
                 {
                     arg = argc;
                     break;
                 }
-                else if (key == '-')
+                else if (key == '-' && volume > 0)
                 {
-                    if (volume > 0)
-                    {
-                        volume--;
-                        Midiplay_SetVolume(volume * 127 / 100);
-                    }
+                    volume--;
+                    Midiplay_SetVolume(volume * 127 / 100);
                 }
-                else if (key == '=')
+                else if (key == '=' && volume < 100)
                 {
-                    if (volume < 100)
-                    {
-                        volume++;
-                        Midiplay_SetVolume(volume * 127 / 100);
-                    }
+                    volume++;
+                    Midiplay_SetVolume(volume * 127 / 100);
                 }
                 else if (key == 'r')
+                {
                     Midiplay_Restart();
+                }
 
                 length = Midiplay_Time();
                 printf("[%s%s] [%3i%%] %*i:%02i.%i\r", playing ? " " : "P", looping ? "L" : " ", volume, count, length / 600, (length / 10) % 60, length % 10);
@@ -176,7 +180,9 @@ int main(int argc, char **argv)
             printf("\33[K\r");
         }
         else
+        {
             printf("Invalid file: %s\n\r", argv[arg]);
+        }
 
         free(buffer);
     }

@@ -41,6 +41,38 @@ int Midiplay_Load(void *data, int size)
     if (size < 4)
         return 0;
 
+    if (hdr[0] == 'R' && hdr[1] == 'I' && hdr[2] == 'F' && hdr[3] == 'F')
+    {
+        if (size < 20)
+        {
+            return 0;
+        }
+        size -= 8;
+        if (*(UINT *)(hdr + 4) != size)
+        {
+            return 0;
+        }
+
+        if (hdr[8] != 'R' || hdr[9] != 'M' || hdr[10] != 'I' || hdr[11] != 'D')
+        {
+            return 0;
+        }
+        if (hdr[12] != 'd' || hdr[13] != 'a' || hdr[14] != 't' || hdr[15] != 'a')
+        {
+            return 0;
+        }
+
+        // we'll ignore any trailing riff chunks
+        //  and adjust the size instead to the contained data
+        size -= 12;
+        if (size < *(UINT *)(hdr + 16))
+        {
+            return 0;
+        }
+        size = *(UINT *)(hdr + 16);
+        hdr += 20;
+    }
+
     if (hdr[0] == 'M' && hdr[1] == 'U' && hdr[2] == 'S' && hdr[3] == 0x1a)
     {
         if (size < MUS_HDRSIZE)

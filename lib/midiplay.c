@@ -6,6 +6,7 @@
 #include "timer.h"
 
 // header sizes in bytes
+#define RMI_HDRSIZE 20
 #define MUS_HDRSIZE 16
 #define MID_HDRSIZE 14
 
@@ -43,10 +44,11 @@ int Midiplay_Load(void *data, int size)
 
     if (hdr[0] == 'R' && hdr[1] == 'I' && hdr[2] == 'F' && hdr[3] == 'F')
     {
-        if (size < 20)
+        if (size < RMI_HDRSIZE)
         {
             return 0;
         }
+
         size -= 8;
         if (*(UINT *)(hdr + 4) != size)
         {
@@ -70,7 +72,7 @@ int Midiplay_Load(void *data, int size)
             return 0;
         }
         size = *(UINT *)(hdr + 16);
-        hdr += 20;
+        hdr += RMI_HDRSIZE;
     }
 
     if (hdr[0] == 'M' && hdr[1] == 'U' && hdr[2] == 'S' && hdr[3] == 0x1a)

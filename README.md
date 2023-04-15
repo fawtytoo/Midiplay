@@ -7,6 +7,8 @@ The player uses the SDL library for audio output.
 
 This project can play both MUS and MIDI files due to their similar structure. MIDI type 0 & 1 files are supported; type 2 is unknown due to lack of suitable files to test with. Similarly, Midiplay does not handle the SMPTE format.
 
+Also supports the RMI file format; RMI is a RIFF wrapper for MIDI.
+
 ### Inspiration
 The inspiration for this project came from the original DOOM source code.
 

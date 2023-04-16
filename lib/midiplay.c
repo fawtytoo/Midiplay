@@ -6,12 +6,15 @@
 #include "timer.h"
 
 // header sizes in bytes
-#define RMI_HDRSIZE 20
-#define MUS_HDRSIZE 16
-#define MID_HDRSIZE 14
+#define RMI_HDRSIZE     20
+#define MUS_HDRSIZE     16
+#define MID_HDRSIZE     14
 
-#define LE16(a, b)  (a | (b << 8))
-#define BE16(a, b)  ((a << 8) | b)
+#define ID(a, b, c, d)  (id[0] == a && id[1] == b && id[2] == c && id[3] == d)
+
+#define LE16(a, b)      (byte[a] | (byte[b] << 8))
+#define BE16(a, b)      LE16(b, a)
+#define LE32(a, b, c, d)(LE16(a, b) | (LE16(c, d) << 16))
 
 int         musicInit = 0;
 
@@ -31,7 +34,8 @@ void Midiplay_Init(int samplerate)
 
 int Midiplay_Load(void *data, int size)
 {
-    BYTE    *hdr = (BYTE *)data;
+    BYTE    *byte = (BYTE *)data;
+    BYTE    *id = byte;
 
     if (musicInit == 0)
         return 0;
@@ -42,64 +46,65 @@ int Midiplay_Load(void *data, int size)
     if (size < 4)
         return 0;
 
-    if (hdr[0] == 'R' && hdr[1] == 'I' && hdr[2] == 'F' && hdr[3] == 'F')
+    if (ID('R', 'I', 'F', 'F'))
     {
         if (size < RMI_HDRSIZE)
         {
             return 0;
         }
 
-        size -= 8;
-        if (*(UINT *)(hdr + 4) != size)
+        if (LE32(4, 5, 6, 7) != size - 8)
         {
             return 0;
         }
 
-        if (hdr[8] != 'R' || hdr[9] != 'M' || hdr[10] != 'I' || hdr[11] != 'D')
-        {
-            return 0;
-        }
-        if (hdr[12] != 'd' || hdr[13] != 'a' || hdr[14] != 't' || hdr[15] != 'a')
+        id += 8;
+        if (!ID('R', 'M', 'I', 'D'))
         {
             return 0;
         }
 
-        // we'll ignore any trailing riff chunks
-        //  and adjust the size instead to the contained data
-        size -= 12;
-        if (size < *(UINT *)(hdr + 16))
+        id += 4;
+        if (!ID('d', 'a', 't', 'a'))
         {
             return 0;
         }
-        size = *(UINT *)(hdr + 16);
-        hdr += RMI_HDRSIZE;
+
+        if (size - RMI_HDRSIZE < LE32(16, 17, 18, 19))
+        {
+            return 0;
+        }
+        // adjust the size to the midi data chunk
+        size = LE32(16, 17, 18, 19);
+        byte += RMI_HDRSIZE;
+        id = byte;
     }
 
-    if (hdr[0] == 'M' && hdr[1] == 'U' && hdr[2] == 'S' && hdr[3] == 0x1a)
+    if (ID('M', 'U', 'S', 0x1a))
     {
         if (size < MUS_HDRSIZE)
             return 0;
 
-        if (size < LE16(hdr[6], hdr[7]) + LE16(hdr[4], hdr[5]))
+        if (size < LE16(6, 7) + LE16(4, 5))
             return 0;
 
-        beatTicks = LE16(hdr[14], hdr[15]);
+        beatTicks = LE16(14, 15);
         if (beatTicks == 0)
             beatTicks = 70;
 
-        LoadMusTrack(hdr + LE16(hdr[6], hdr[7]));
+        LoadMusTrack(byte + LE16(6, 7));
     }
-    else if (hdr[0] == 'M' && hdr[1] == 'T' && hdr[2] == 'h' && hdr[3] == 'd')
+    else if (ID('M', 'T', 'h', 'd'))
     {
         if (size < MID_HDRSIZE)
             return 0;
 
-        beatTicks = BE16(hdr[12], hdr[13]);
+        beatTicks = BE16(12, 13);
         if (beatTicks < 0)
             return 0; // no support for SMPTE format yet
 
         size -= MID_HDRSIZE;
-        if (LoadMidTracks(BE16(hdr[10], hdr[11]), &hdr[MID_HDRSIZE], size) == 1)
+        if (LoadMidTracks(BE16(10, 11), byte + MID_HDRSIZE, size) == 1)
             return 0; // track header failed
     }
     else

@@ -10,12 +10,6 @@
 #define MUS_HDRSIZE     16
 #define MID_HDRSIZE     14
 
-#define ID(a, b, c, d)  (id[0] == a && id[1] == b && id[2] == c && id[3] == d)
-
-#define LE16(a, b)      (byte[a] | (byte[b] << 8))
-#define BE16(a, b)      LE16(b, a)
-#define LE32(a, b, c, d)(LE16(a, b) | (LE16(c, d) << 16))
-
 int         musicInit = 0;
 
 int         musicLooping;
@@ -35,7 +29,6 @@ void Midiplay_Init(int samplerate)
 int Midiplay_Load(void *data, int size)
 {
     BYTE    *byte = (BYTE *)data;
-    BYTE    *id = byte;
 
     if (musicInit == 0)
         return 0;
@@ -46,65 +39,62 @@ int Midiplay_Load(void *data, int size)
     if (size < 4)
         return 0;
 
-    if (ID('R', 'I', 'F', 'F'))
+    if (ID(byte, "RIFF"))
     {
         if (size < RMI_HDRSIZE)
         {
             return 0;
         }
 
-        if (LE32(4, 5, 6, 7) != size - 8)
+        if (LE32(byte + 4) != size - 8)
         {
             return 0;
         }
 
-        id += 8;
-        if (!ID('R', 'M', 'I', 'D'))
+        if (!ID((byte + 8), "RMID"))
         {
             return 0;
         }
 
-        id += 4;
-        if (!ID('d', 'a', 't', 'a'))
+        if (!ID((byte + 12), "data"))
         {
             return 0;
         }
 
-        if (size - RMI_HDRSIZE < LE32(16, 17, 18, 19))
+        if (size - RMI_HDRSIZE < LE32(byte + 16))
         {
             return 0;
         }
         // adjust the size to the midi data chunk
-        size = LE32(16, 17, 18, 19);
+        size = LE32(byte + 16);
         byte += RMI_HDRSIZE;
-        id = byte;
     }
 
-    if (ID('M', 'U', 'S', 0x1a))
+    if (ID(byte, "MUS" "\x1a"))
     {
         if (size < MUS_HDRSIZE)
             return 0;
 
-        if (size < LE16(6, 7) + LE16(4, 5))
+        if (size < LE16(byte + 6) + LE16(byte + 4))
             return 0;
 
-        beatTicks = LE16(14, 15);
+        beatTicks = LE16(byte + 14);
         if (beatTicks == 0)
             beatTicks = 70;
 
-        LoadMusTrack(byte + LE16(6, 7));
+        LoadMusTrack(byte + LE16(byte + 6));
     }
-    else if (ID('M', 'T', 'h', 'd'))
+    else if (ID(byte, "MThd"))
     {
         if (size < MID_HDRSIZE)
             return 0;
 
-        beatTicks = BE16(12, 13);
+        beatTicks = BE16(byte + 12);
         if (beatTicks < 0)
             return 0; // no support for SMPTE format yet
 
         size -= MID_HDRSIZE;
-        if (LoadMidTracks(BE16(10, 11), byte + MID_HDRSIZE, size) == 1)
+        if (LoadMidTracks(BE16(byte + 10), byte + MID_HDRSIZE, size) == 1)
             return 0; // track header failed
     }
     else

@@ -4,6 +4,7 @@
 
 #include "common.h"
 #include "timer.h"
+#include "synth.h"
 
 // header sizes in bytes
 #define RMI_HDRSIZE     20
@@ -16,11 +17,9 @@ int         musicLooping;
 int         musicPlaying = 0;
 int         musicVolume = 0x100;
 
-TIMER       phaseRate;
-
 void Midiplay_Init(int samplerate)
 {
-    SetTimer(&phaseRate, 65536, samplerate);
+    SetTimer(&timerPhase, 65536, samplerate);
     SetTimer(&timerSecond, 1000000, samplerate);
 
     musicInit = 1;
@@ -159,7 +158,7 @@ void Midiplay_Output(short *output, int length)
                 playSamples += UpdateTimer(&timerBeat);
             }
 
-            GenerateSample(buffer, UpdateTimer(&phaseRate));
+            Synth_Generate(buffer);
             output[0] = buffer[0] * musicVolume >> 8;
             output[1] = buffer[1] * musicVolume >> 8;
         }

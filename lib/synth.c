@@ -2,7 +2,11 @@
 
 // Copyright 2022 by Steve Clark
 
+#include "timer.h"
+
 #include "synth.h"
+
+int synthRate;
 
 short Synth_GenPhase(UINT phase, short *neg)
 {
@@ -28,11 +32,13 @@ short Synth_GenEnv(int stage)
     return out;
 }
 
-void GenerateSample(short *buffer, short rate)
+void Synth_Generate(short *buffer)
 {
     VOICE   *voice;
     short   left = 0, right = 0;
     short   phase, neg;
+
+    synthRate = UpdateTimer(&timerPhase);
 
     for (voice = voiceHead; voice <= voiceTail; voice++)
     {
@@ -42,7 +48,7 @@ void GenerateSample(short *buffer, short rate)
         left += (voice->left * phase >> 9) ^ neg;
         right += (voice->right * phase >> 9) ^ neg;
 
-        voice->phase += voice->step * rate;
+        voice->phase += voice->step * synthRate;
     }
 
     *buffer++ = left;

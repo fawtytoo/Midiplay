@@ -35,7 +35,6 @@ void LoadMusTrack(BYTE *);
 int LoadMidTracks(int, BYTE *, int);
 void InitTracks(void);
 void UpdateEvents(void);
-void GenerateSample(short *, short);
 
 #endif
 

@@ -39,6 +39,8 @@ typedef struct
 
 extern VOICE    midVoice[], *voiceHead, *voiceTail;
 
+void Synth_Generate(short *);
+
 #endif
 
 // midiplay

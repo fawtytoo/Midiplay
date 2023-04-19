@@ -99,27 +99,6 @@ UINT    panTable[2][128] =
     }
 };
 
-typedef struct
-{
-    int     instrument;
-    int     volume;
-    int     pan;
-    int     sustain;
-    int     bend;
-    int     expression;
-} CHANNEL;
-
-typedef struct
-{
-    CHANNEL *channel;
-    int     note;
-    int     volume;
-    UINT    phase, step;
-    int     env_stage;
-    short   left, right;
-    int     playing; // bit field
-} VOICE;
-
 CHANNEL midChannel[16];
 VOICE   midVoice[VOICES], *voiceHead = &midVoice[0], *voiceTail = &midVoice[VOICES - 1];
 
@@ -403,27 +382,6 @@ void Event_Message()
       default:
         break;
     }
-}
-
-void GenerateSample(short *buffer, short rate)
-{
-    VOICE   *voice;
-    short   left = 0, right = 0;
-    short   phase, neg;
-
-    for (voice = voiceHead; voice <= voiceTail; voice++)
-    {
-        phase = Synth_GenPhase(voice->phase >> 21, &neg);
-        phase *= Synth_GenEnv(voice->env_stage) >> 8;
-
-        left += (voice->left * phase >> 9) ^ neg;
-        right += (voice->right * phase >> 9) ^ neg;
-
-        voice->phase += voice->step * rate;
-    }
-
-    *buffer++ = left;
-    *buffer = right;
 }
 
 // midiplay

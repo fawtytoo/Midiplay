@@ -16,8 +16,28 @@ enum
     env_release
 };
 
-short Synth_GenPhase(UINT, short *);
-short Synth_GenEnv(int);
+typedef struct
+{
+    int     instrument;
+    int     volume;
+    int     pan;
+    int     sustain;
+    int     bend;
+    int     expression;
+} CHANNEL;
+
+typedef struct
+{
+    CHANNEL *channel;
+    int     note;
+    int     volume;
+    UINT    phase, step;
+    int     env_stage;
+    short   left, right;
+    int     playing; // bit field
+} VOICE;
+
+extern VOICE    midVoice[], *voiceHead, *voiceTail;
 
 #endif
 

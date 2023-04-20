@@ -44,6 +44,7 @@ void Synth_Generate(short *buffer)
     {
         out = Synth_GenPhase(voice->phase >> 21);
         out = out * Synth_GenEnv(voice->env_stage) >> 8;
+        out = out * voice->volume >> 8;
 
         left += out * voice->left >> 9;
         right += out * voice->right >> 9;

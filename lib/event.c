@@ -107,7 +107,7 @@ EVENT   *eventData;
 void ResetChannel(int channel)
 {
     midChannel[channel].instrument = 0;
-    midChannel[channel].volume = 100;
+    midChannel[channel].volume = volumeTable[100];
     midChannel[channel].pan = 64;
 }
 
@@ -124,7 +124,7 @@ void VoiceVolume(VOICE *voice)
 {
     UINT    volume;
 
-    volume = VOLUME * volumeTable[voice->channel->volume * voice->channel->expression >> 7] * volumeTable[voice->volume] >> 16;
+    volume = VOLUME * voice->channel->volume * voice->channel->expression >> 16;
 
     voice->left = volume * panTable[0][voice->channel->pan] >> 8;
     voice->right = volume * panTable[1][voice->channel->pan] >> 8;
@@ -146,7 +146,7 @@ void ResetControls()
     {
         midChannel[channel].sustain = 0;
         midChannel[channel].bend = 0;
-        midChannel[channel].expression = 127;
+        midChannel[channel].expression = volumeTable[127];
     }
 }
 
@@ -201,7 +201,7 @@ void Event_NoteOn()
         {
             voice->channel = channel;
             voice->note = note;
-            voice->volume = volume;
+            voice->volume = volumeTable[volume];
             VoiceVolume(voice);
 
             FrequencyStep(voice);
@@ -251,7 +251,7 @@ void Event_Aftertouch()
             if (voice->channel == channel)
                 if (voice->note == note)
                 {
-                    voice->volume = volume;
+                    voice->volume = volumeTable[volume];
                     VoiceVolume(voice);
                 }
 }
@@ -280,7 +280,7 @@ void Event_ChannelVolume()
     int     volume = eventData->data[1];
     VOICE   *voice;
 
-    channel->volume = volume & 0x7f;
+    channel->volume = volumeTable[volume & 0x7f];
 
     for (voice = voiceHead; voice <= voiceTail; voice++)
         if (voice->playing)
@@ -312,7 +312,7 @@ void Event_ChannelAftertouch()
         if (voice->playing)
             if (voice->channel == channel)
             {
-                voice->volume = volume;
+                voice->volume = volumeTable[volume];
                 VoiceVolume(voice);
             }
 }
@@ -323,7 +323,7 @@ void Event_Expression()
     int     expression = eventData->data[1] & 0x7f;
     VOICE   *voice;
 
-    channel->expression = expression;
+    channel->expression = volumeTable[expression];
 
     for (voice = voiceHead; voice <= voiceTail; voice++)
         if (voice->playing)

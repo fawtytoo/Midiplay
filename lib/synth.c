@@ -8,14 +8,14 @@
 
 int synthRate;
 
-short Synth_GenPhase(UINT phase, short *neg)
+short Synth_GenPhase(UINT phase)
 {
-    *neg = 0x000;
+    short   neg = 0;
 
     if (phase & 0x400)
-        *neg = 0xffff;
+        neg = -1;
 
-    return 0x1ff;
+    return 0x1ff ^ neg;
 }
 
 short Synth_GenEnv(int stage)
@@ -36,17 +36,17 @@ void Synth_Generate(short *buffer)
 {
     VOICE   *voice;
     short   left = 0, right = 0;
-    short   phase, neg;
+    short   out;
 
     synthRate = UpdateTimer(&timerPhase);
 
     for (voice = voiceHead; voice <= voiceTail; voice++)
     {
-        phase = Synth_GenPhase(voice->phase >> 21, &neg);
-        phase *= Synth_GenEnv(voice->env_stage) >> 8;
+        out = Synth_GenPhase(voice->phase >> 21);
+        out = out * Synth_GenEnv(voice->env_stage) >> 8;
 
-        left += (voice->left * phase >> 9) ^ neg;
-        right += (voice->right * phase >> 9) ^ neg;
+        left += out * voice->left >> 9;
+        right += out * voice->right >> 9;
 
         voice->phase += voice->step * synthRate;
     }

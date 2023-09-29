@@ -100,7 +100,7 @@ UINT    panTable[2][128] =
 };
 
 CHANNEL midChannel[16];
-VOICE   midVoice[VOICES], *voiceHead = &midVoice[0], *voiceTail = &midVoice[VOICES - 1];
+VOICE   midVoice[VOICES], *voiceHead = &midVoice[0];
 
 EVENT   *eventData;
 
@@ -132,10 +132,13 @@ void VoiceVolume(VOICE *voice)
 
 void ResetVoices()
 {
-    VOICE   *voice;
+    VOICE   *voice = voiceHead;
+    int     index;
 
-    for (voice = voiceHead; voice <= voiceTail; voice++)
+    for (index = 0; index < VOICES; index++, voice++)
+    {
         VoiceOff(voice, 0);
+    }
 }
 
 void ResetControls()
@@ -155,13 +158,16 @@ void Event_NoteOff()
     CHANNEL *channel = &midChannel[eventData->channel];
     int     note = eventData->data[0];
     //int         volume = eventData->data[1];
-    VOICE   *voice;
+    VOICE   *voice = voiceHead;
+    int     index;
 
-    for (voice = voiceHead; voice <= voiceTail; voice++)
-        if (voice->playing)
-            if (voice->channel == channel)
-                if (voice->note == note)
-                    VoiceOff(voice, NOTE_SUSTAIN);
+    for (index = 0; index < VOICES; index++, voice++)
+    {
+        if (voice->playing && voice->channel == channel && voice->note == note)
+        {
+            VoiceOff(voice, NOTE_SUSTAIN);
+        }
+    }
 }
 
 void FrequencyStep(VOICE *voice)
@@ -194,9 +200,11 @@ void Event_NoteOn()
     CHANNEL *channel = &midChannel[eventData->channel];
     int     note = eventData->data[0];
     int     volume = eventData->data[1];
-    VOICE   *voice;
+    VOICE   *voice = voiceHead;
+    int     index;
 
-    for (voice = voiceHead; voice <= voiceTail; voice++)
+    for (index = 0; index < VOICES; index++, voice++)
+    {
         if (voice->playing == 0)
         {
             voice->channel = channel;
@@ -212,31 +220,40 @@ void Event_NoteOn()
 
             break;
         }
+    }
 }
 
 void Event_MuteNotes()
 {
     CHANNEL *channel = &midChannel[eventData->channel];
-    VOICE   *voice;
+    VOICE   *voice = voiceHead;
+    int     index;
 
-    for (voice = voiceHead; voice <= voiceTail; voice++)
-        if (voice->playing)
-            if (voice->channel == channel)
-                VoiceOff(voice, NOTE_SUSTAIN);
+    for (index = 0; index < VOICES; index++, voice++)
+    {
+        if (voice->playing && voice->channel == channel)
+        {
+            VoiceOff(voice, NOTE_SUSTAIN);
+        }
+    }
 }
 
 void Event_PitchWheel()
 {
     CHANNEL *channel = &midChannel[eventData->channel];
     int     bend = ((eventData->data[0] & 0x7f) | (eventData->data[1] << 7));
-    VOICE   *voice;
+    VOICE   *voice = voiceHead;
+    int     index;
 
     channel->bend = (bend >> 7) - 64; // 7 bit values
 
-    for (voice = voiceHead; voice <= voiceTail; voice++)
-        if (voice->playing)
-            if (voice->channel == channel)
-                FrequencyStep(voice);
+    for (index = 0; index < VOICES; index++, voice++)
+    {
+        if (voice->playing && voice->channel == channel)
+        {
+            FrequencyStep(voice);
+        }
+    }
 }
 
 void Event_Aftertouch()
@@ -244,23 +261,25 @@ void Event_Aftertouch()
     CHANNEL *channel = &midChannel[eventData->channel];
     int     note = eventData->data[0];
     int     volume = eventData->data[1];
-    VOICE   *voice;
+    VOICE   *voice = voiceHead;
+    int     index;
 
-    for (voice = voiceHead; voice <= voiceTail; voice++)
-        if (voice->playing)
-            if (voice->channel == channel)
-                if (voice->note == note)
-                {
-                    voice->volume = volumeTable[volume];
-                    VoiceVolume(voice);
-                }
+    for (index = 0; index < VOICES; index++, voice++)
+    {
+        if (voice->playing && voice->channel == channel && voice->note == note)
+        {
+            voice->volume = volumeTable[volume];
+            VoiceVolume(voice);
+        }
+    }
 }
 
 void Event_Sustain()
 {
     CHANNEL *channel = &midChannel[eventData->channel];
     int     sustain = eventData->data[1] >> 6;
-    VOICE   *voice;
+    VOICE   *voice = voiceHead;
+    int     index;
 
     // sustain: 0=off, 2=on
     channel->sustain = ((sustain >> 1) | (sustain & 1)) << 1;
@@ -268,67 +287,84 @@ void Event_Sustain()
     if (channel->sustain != 0)
         return;
 
-    for (voice = voiceHead; voice <= voiceTail; voice++)
-        if (voice->playing)
-            if (voice->channel == channel)
-                VoiceOff(voice, NOTE_PLAY);
+    for (index = 0; index < VOICES; index++, voice++)
+    {
+        if (voice->playing && voice->channel == channel)
+        {
+            VoiceOff(voice, NOTE_PLAY);
+        }
+    }
 }
 
 void Event_ChannelVolume()
 {
     CHANNEL *channel = &midChannel[eventData->channel];
     int     volume = eventData->data[1];
-    VOICE   *voice;
+    VOICE   *voice = voiceHead;
+    int     index;
 
     channel->volume = volumeTable[volume & 0x7f];
 
-    for (voice = voiceHead; voice <= voiceTail; voice++)
-        if (voice->playing)
-            if (voice->channel == channel)
-                VoiceVolume(voice);
+    for (index = 0; index < VOICES; index++, voice++)
+    {
+        if (voice->playing && voice->channel == channel)
+        {
+            VoiceVolume(voice);
+        }
+    }
 }
 
 void Event_Pan()
 {
     CHANNEL *channel = &midChannel[eventData->channel];
     int     pan = eventData->data[1] & 0x7f;
-    VOICE   *voice;
+    VOICE   *voice = voiceHead;
+    int     index;
 
     channel->pan = pan;
 
-    for (voice = voiceHead; voice <= voiceTail; voice++)
-        if (voice->playing)
-            if (voice->channel == channel)
-                VoiceVolume(voice);
+    for (index = 0; index < VOICES; index++, voice++)
+    {
+        if (voice->playing && voice->channel == channel)
+        {
+            VoiceVolume(voice);
+        }
+    }
 }
 
 void Event_ChannelAftertouch()
 {
     CHANNEL *channel = &midChannel[eventData->channel];
     int     volume = eventData->data[0];
-    VOICE   *voice;
+    VOICE   *voice = voiceHead;
+    int     index;
 
-    for (voice = voiceHead; voice <= voiceTail; voice++)
-        if (voice->playing)
-            if (voice->channel == channel)
-            {
-                voice->volume = volumeTable[volume];
-                VoiceVolume(voice);
-            }
+    for (index = 0; index < VOICES; index++, voice++)
+    {
+        if (voice->playing && voice->channel == channel)
+        {
+            voice->volume = volumeTable[volume];
+            VoiceVolume(voice);
+        }
+    }
 }
 
 void Event_Expression()
 {
     CHANNEL *channel = &midChannel[eventData->channel];
     int     expression = eventData->data[1] & 0x7f;
-    VOICE   *voice;
+    VOICE   *voice = voiceHead;
+    int     index;
 
     channel->expression = volumeTable[expression];
 
-    for (voice = voiceHead; voice <= voiceTail; voice++)
-        if (voice->playing)
-            if (voice->channel == channel)
-                VoiceVolume(voice);
+    for (index = 0; index < VOICES; index++, voice++)
+    {
+        if (voice->playing && voice->channel == channel)
+        {
+            VoiceVolume(voice);
+        }
+    }
 }
 
 void Event_ChangeInstrument()

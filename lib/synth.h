@@ -37,7 +37,7 @@ typedef struct
     int     playing; // bit field
 } VOICE;
 
-extern VOICE    midVoice[], *voiceHead, *voiceTail;
+extern VOICE    midVoice[], *voiceHead;
 
 void Synth_Generate(short *);
 

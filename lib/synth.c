@@ -34,13 +34,14 @@ short Synth_GenEnv(int stage)
 
 void Synth_Generate(short *buffer)
 {
-    VOICE   *voice;
+    VOICE   *voice = voiceHead;
+    int     index;
     short   left = 0, right = 0;
     short   out;
 
     synthRate = UpdateTimer(&timerPhase);
 
-    for (voice = voiceHead; voice <= voiceTail; voice++)
+    for (index = 0; index < VOICES; index++, voice++)
     {
         out = Synth_GenPhase(voice->phase >> 21);
         out = out * Synth_GenEnv(voice->env_stage) >> 8;

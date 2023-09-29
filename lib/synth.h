@@ -39,7 +39,7 @@ typedef struct
 
 extern VOICE    midVoice[], *voiceHead;
 
-void Synth_Generate(short *);
+void Synth_Generate(short *, int);
 
 #endif
 

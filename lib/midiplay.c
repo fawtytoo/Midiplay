@@ -158,7 +158,7 @@ void Midiplay_Output(short *output, int length)
                 playSamples += UpdateTimer(&timerBeat);
             }
 
-            Synth_Generate(buffer);
+            Synth_Generate(buffer, UpdateTimer(&timerPhase));
             output[0] = buffer[0] * musicVolume >> 8;
             output[1] = buffer[1] * musicVolume >> 8;
         }

@@ -26,6 +26,8 @@ OP;
 
 OP      synthOp[VOICES];
 
+// n = 0 .. 384
+// frequencyTable[n] = (UINT)(440.0f * pow(2, (n - 2208) / 384.0f) * (1 << 24) / samplerate);
 UINT    frequencyTable[384] =
 {
     0x00082d01, 0x000830c9, 0x00083493, 0x0008385e, 0x00083c2b, 0x00083ffa, 0x000843cb, 0x0008479e,

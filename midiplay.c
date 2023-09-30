@@ -24,6 +24,7 @@ TIMER;
 TIMER   timerPhase, timerSecond, timerBeat;
 
 // event -----------------------------------------------------------------------
+#define NOTE_OFF        0
 #define NOTE_PLAY       1
 #define NOTE_SUSTAIN    2
 
@@ -48,7 +49,8 @@ typedef struct
 {
     BYTE    channel;
     BYTE    data[3];
-} EVENT;
+}
+EVENT;
 
 typedef struct
 {
@@ -107,7 +109,8 @@ typedef struct
     DOEVENT DoEvent;
     EVENT   event;
     int     done;
-} TRACK;
+}
+TRACK;
 
 TRACK   midTrack[65536], *curTrack, *endTrack;
 int     numTracks, numTracksEnded;
@@ -148,25 +151,26 @@ int     controllerMap[128] =
 #define MUS_HDRSIZE     16
 #define MID_HDRSIZE     14
 
-int         musicInit = 0;
-
-int         musicLooping;
-int         musicPlaying = 0;
-int         musicVolume = 0x100;
+int musicInit = 0;
+int musicLooping;
+int musicPlaying = 0;
+int musicVolume = 0x100;
 
 // timer -----------------------------------------------------------------------
-int UpdateTimer(TIMER *timer)
+int Timer_Update(TIMER *timer)
 {
     timer->acc += timer->remainder;
     if (timer->acc < timer->divisor)
+    {
         return timer->rate;
+    }
 
     timer->acc -= timer->divisor;
 
     return timer->rate + 1;
 }
 
-void SetTimer(TIMER *timer, int numerator, int divisor)
+void Timer_Set(TIMER *timer, int numerator, int divisor)
 {
     timer->acc = 0;
     timer->rate = numerator / divisor;
@@ -205,7 +209,7 @@ void ResetVoices()
 
     for (index = 0; index < VOICES; index++, voice++)
     {
-        VoiceOff(voice, 0);
+        VoiceOff(voice, NOTE_OFF);
     }
 }
 
@@ -287,7 +291,6 @@ void Event_NoteOn()
             Synth_KeyOn(index);
 
             voice->playing = NOTE_PLAY | channel->sustain;
-
             break;
         }
     }
@@ -347,14 +350,14 @@ void Event_Aftertouch()
 void Event_Sustain()
 {
     CHANNEL *channel = &midChannel[eventData->channel];
-    int     sustain = eventData->data[1] >> 6;
+    int     sustain = eventData->data[1];
     VOICE   *voice = voiceHead;
     int     index;
 
     // sustain: 0=off, 2=on
-    channel->sustain = ((sustain >> 1) | (sustain & 1)) << 1;
+    channel->sustain = sustain < 64 ? NOTE_OFF : NOTE_SUSTAIN;
 
-    if (channel->sustain != 0)
+    if (channel->sustain == NOTE_SUSTAIN)
     {
         return;
     }
@@ -507,7 +510,7 @@ void DoNothing()
 
 void InitTracks()
 {
-    int     track, channel;
+    int track, channel;
 
     for (track = 0; track < numTracks; track++)
     {
@@ -527,7 +530,7 @@ void InitTracks()
     playSamples = 0;
 
     beatTempo = 500000;
-    SetTimer(&timerBeat, beatTempo, beatTicks);
+    Timer_Set(&timerBeat, beatTempo, beatTicks);
 
     ResetControls();
     ResetVoices();
@@ -541,7 +544,7 @@ void SetTempo()
 {
     // if the tempo changes, should playSamples be reset?
     beatTempo = (curTrack->event.data[0] << 16) | (curTrack->event.data[1] << 8) | curTrack->event.data[2];
-    SetTimer(&timerBeat, beatTempo, beatTicks);
+    Timer_Set(&timerBeat, beatTempo, beatTicks);
 }
 
 void EndOfTrack()
@@ -555,7 +558,9 @@ void EndOfMidiTrack()
     EndOfTrack();
     curTrack->DoEvent = DoNothing;
     if (numTracksEnded < numTracks)
+    {
         return;
+    }
 
     if (musicLooping == 0)
     {
@@ -679,7 +684,9 @@ int GetMusEvent(int *time)
     curTrack->DoEvent();
 
     if (last & 0x80)
+    {
         *time = GetLength();
+    }
 
     return last;
 }
@@ -694,9 +701,13 @@ void GetMidEvent()
     data = *curTrack->pos;
 
     if (data & 0x80)
+    {
         event = *curTrack->pos++;
+    }
     else
+    {
         data = curTrack->running;
+    }
 
     curTrack->event.channel = data & 0x0f;
 
@@ -775,27 +786,35 @@ void GetMidEvent()
     }
 
     if (event & 0x80)
+    {
         curTrack->running = event;
+    }
 }
 
 void TrackMusEvents()
 {
-    int     ticks;
+    int ticks;
 
     if (curTrack->done)
+    {
         return;
+    }
 
     if (curTrack->clock > musicClock)
+    {
         return;
+    }
 
-    while (GetMusEvent(&ticks) == 0);
+    while (GetMusEvent(&ticks) == 0)
+    {
+    }
 
     curTrack->clock += ticks;
 }
 
 void TrackMidEvents()
 {
-    int     ticks;
+    int ticks;
 
     curTrack = &midTrack[0];
 
@@ -810,7 +829,9 @@ void TrackMidEvents()
                 curTrack->DoEvent();
 
                 if (curTrack->done)
+                {
                     break;
+                }
 
                 ticks = GetLength();
                 curTrack->clock += ticks;
@@ -844,23 +865,28 @@ void LoadMusTrack(BYTE *data)
 
 int LoadMidTracks(int count, BYTE *data, int size)
 {
-    int     track;
-    int     length;
+    int track, length;
 
     for (track = 0; track < count; track++)
     {
         if (size < 8)
+        {
             return 1;
+        }
 
         if (!ID(data, "MTrk"))
+        {
             return 1;
+        }
 
         length = BE32(data + 4);
 
         data += 8;
         size -= 8;
         if (size < length)
+        {
             return 1;
+        }
 
         midTrack[track].data = data;
         data += length;
@@ -878,8 +904,8 @@ int LoadMidTracks(int count, BYTE *data, int size)
 // midiplay --------------------------------------------------------------------
 void Midiplay_Init(int samplerate)
 {
-    SetTimer(&timerPhase, 65536, samplerate);
-    SetTimer(&timerSecond, 1000000, samplerate);
+    Timer_Set(&timerPhase, 65536, samplerate);
+    Timer_Set(&timerSecond, MICROSEC, samplerate);
 
     musicInit = 1;
 }
@@ -889,13 +915,17 @@ int Midiplay_Load(void *data, int size)
     BYTE    *byte = (BYTE *)data;
 
     if (musicInit == 0)
+    {
         return 0;
+    }
 
     musicInit = 1;
     musicPlaying = 0;
 
     if (size < 4)
+    {
         return 0;
+    }
 
     if (ID(byte, "RIFF"))
     {
@@ -931,38 +961,54 @@ int Midiplay_Load(void *data, int size)
     if (ID(byte, "MUS" "\x1a"))
     {
         if (size < MUS_HDRSIZE)
+        {
             return 0;
+        }
 
         if (size < LE16(byte + 6) + LE16(byte + 4))
+        {
             return 0;
+        }
 
         beatTicks = LE16(byte + 14);
         if (beatTicks == 0)
+        {
             beatTicks = 70;
+        }
 
         LoadMusTrack(byte + LE16(byte + 6));
     }
     else if (ID(byte, "MThd"))
     {
         if (size < MID_HDRSIZE)
+        {
             return 0;
+        }
 
         beatTicks = BE16(byte + 12);
         if (beatTicks < 0)
-            return 0; // no support for SMPTE format yet
+        {
+            return 0; // no support for SMPTE format
+        }
 
         size -= MID_HDRSIZE;
         if (LoadMidTracks(BE16(byte + 10), byte + MID_HDRSIZE, size) == 1)
+        {
             return 0; // track header failed
+        }
     }
     else
+    {
         return 0;
+    }
 
     InitTracks();
     musicLooping = 0;
 
     while (numTracksEnded < numTracks)
+    {
         UpdateEvents();
+    }
 
     musicInit = 2;
 
@@ -973,10 +1019,14 @@ void Midiplay_Play(int playing)
 {
     // if there's nothing to play, don't force it
     if (musicInit < 2)
+    {
         return;
+    }
 
     if (numTracksEnded == numTracks)
+    {
         InitTracks();
+    }
 
     musicPlaying = playing;
 }
@@ -984,9 +1034,13 @@ void Midiplay_Play(int playing)
 void Midiplay_SetVolume(int volume)
 {
     if (volume < 0)
+    {
         volume = 0;
+    }
     else if (volume > 127)
+    {
         volume = 127;
+    }
 
     musicVolume = volumeTable[volume];
 }
@@ -994,10 +1048,14 @@ void Midiplay_SetVolume(int volume)
 int Midiplay_IsPlaying()
 {
     if (musicInit < 2)
+    {
         return 0;
+    }
 
     if (numTracksEnded < numTracks)
+    {
         return 1;
+    }
 
     return 0;
 }
@@ -1010,14 +1068,14 @@ void Midiplay_Output(short *output, int length)
     {
         if (musicPlaying)
         {
-            playSamples -= UpdateTimer(&timerSecond);
+            playSamples -= Timer_Update(&timerSecond);
             if (playSamples < 0)
             {
                 UpdateEvents();
-                playSamples += UpdateTimer(&timerBeat);
+                playSamples += Timer_Update(&timerBeat);
             }
 
-            Synth_Generate(buffer, UpdateTimer(&timerPhase));
+            Synth_Generate(buffer, Timer_Update(&timerPhase));
             output[0] = buffer[0] * musicVolume >> 8;
             output[1] = buffer[1] * musicVolume >> 8;
         }
@@ -1035,7 +1093,9 @@ void Midiplay_Output(short *output, int length)
 int Midiplay_Time()
 {
     if (musicInit < 2)
+    {
         return 0;
+    }
 
     return timeTicks * 10 / beatTicks;
 }

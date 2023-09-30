@@ -12,7 +12,7 @@
 #include <termios.h>
 #include <fcntl.h>
 
-#include "lib/midiplay.h"
+#include "midiplay.h"
 
 #define ERROR       printf("%s %s\n\r", argv[arg], strerror(errno))
 

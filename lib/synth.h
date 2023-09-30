@@ -5,41 +5,12 @@
 #ifndef __SYNTH_H__
 #define __SYNTH_H__
 
-#include "common.h"
-
-enum
-{
-    env_none,
-    env_attack,
-    env_decay,
-    env_sustain,
-    env_release
-};
-
-typedef struct
-{
-    int     instrument;
-    int     volume;
-    int     pan;
-    int     sustain;
-    int     bend;
-    int     expression;
-} CHANNEL;
-
-typedef struct
-{
-    CHANNEL *channel;
-    int     note;
-    int     volume;
-    UINT    phase, step;
-    int     env_stage;
-    short   left, right;
-    int     playing; // bit field
-} VOICE;
-
-extern VOICE    midVoice[], *voiceHead;
-
 void Synth_Generate(short *, int);
+void Synth_KeyOn(int);
+void Synth_KeyOff(int);
+void Synth_SetFrequency(int, int, int);
+void Synth_SetVolume(int, int);
+void Synth_SetPan(int, int);
 
 #endif
 

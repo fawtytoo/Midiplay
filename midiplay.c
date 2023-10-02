@@ -178,9 +178,9 @@ void Timer_Set(TIMER *timer, int numerator, int divisor)
 // event -----------------------------------------------------------------------
 void ResetChannel(int channel)
 {
-    midChannel[channel].instrument = 0;
-    midChannel[channel].volume = volumeTable[100];
-    midChannel[channel].pan = 64;
+    midChannel[channel].sustain = 0;
+    midChannel[channel].bend = 0;
+    midChannel[channel].expression = volumeTable[127];
 }
 
 void Voice_Off(VOICE *voice)
@@ -213,16 +213,9 @@ void ResetVoices()
     }
 }
 
-void ResetControls()
+void ResetControllers()
 {
-    int channel;
-
-    for (channel = 0; channel < 16; channel++)
-    {
-        midChannel[channel].sustain = 0;
-        midChannel[channel].bend = 0;
-        midChannel[channel].expression = volumeTable[127];
-    }
+    ResetChannel(eventData->channel);
 }
 
 void Event_NoteOff()
@@ -509,7 +502,7 @@ void Event_Message()
         break;
 
       case CC_79:
-        ResetControls();
+        ResetControllers();
         break;
 
       case CC_7b:
@@ -558,6 +551,9 @@ void InitTracks()
     for (channel = 0; channel < 16; channel++)
     {
         ResetChannel(channel);
+        midChannel[channel].instrument = 0;
+        midChannel[channel].volume = volumeTable[100];
+        midChannel[channel].pan = 64;
         prevVolume[channel] = 0;
     }
 
@@ -567,7 +563,6 @@ void InitTracks()
     beatTempo = 500000;
     Timer_Set(&timerBeat, beatTempo, beatTicks);
 
-    ResetControls();
     ResetVoices();
 
     numTracksEnded = 0;

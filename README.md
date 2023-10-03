@@ -44,6 +44,7 @@ The library handles only a few basic events, but enough that would satisfy most 
 - All Notes Off
 - All Sounds Off
 - Expression
+- Registered Parameter Number
 
 ## Sources
 - [MUS format](https://moddingwiki.shikadi.net/wiki/MUS_Format)
@@ -51,3 +52,4 @@ The library handles only a few basic events, but enough that would satisfy most 
 - [Technical docs](http://midi.teragonaudio.com/)
 - [Standard MIDI-File Format Spec 1.1](http://www.music.mcgill.ca/~ich/classes/mumt306/StandardMIDIfileformat.html)
 - [Official MIDI Specifications](https://www.midi.org/specifications)
+

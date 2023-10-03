@@ -73,6 +73,7 @@ typedef struct
     int     sustain;
     int     bend;
     int     expression;
+    int     rpn;
 }
 CHANNEL;
 
@@ -181,6 +182,7 @@ void ResetChannel(int channel)
     midChannel[channel].sustain = 0;
     midChannel[channel].bend = 0;
     midChannel[channel].expression = volumeTable[127];
+    midChannel[channel].rpn = (127 << 7) | 127;
 }
 
 void Voice_Off(VOICE *voice)
@@ -481,6 +483,9 @@ void Event_Message()
 {
     switch (eventData->data[0])
     {
+      case CC_01:
+        break;
+
       case CC_07:
         Event_ChannelVolume();
         break;
@@ -497,6 +502,16 @@ void Event_Message()
         //Event_Sustain();
         break;
 
+      case CC_64:
+        midChannel[eventData->channel].rpn &= (127 << 7);
+        midChannel[eventData->channel].rpn |= eventData->data[1];
+        break;
+
+      case CC_65:
+        midChannel[eventData->channel].rpn &= 127;
+        midChannel[eventData->channel].rpn |= (eventData->data[1] << 7);
+        break;
+
       case CC_78:
         ResetVoices();
         break;
@@ -511,11 +526,6 @@ void Event_Message()
 
       case CC_80:
         Event_ChangeInstrument();
-        break;
-
-      case CC_01:
-      case CC_64:
-      case CC_65:
         break;
 
       default:

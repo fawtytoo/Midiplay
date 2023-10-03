@@ -116,6 +116,8 @@ int main(int argc, char **argv)
 
         if (Midiplay_Load(buffer, status.st_size))
         {
+            Midiplay_Loop(looping); // Midiplay_Load resets looping
+
             if ((name = strrchr(argv[arg], '/')) == NULL)
             {
                 name = argv[arg];

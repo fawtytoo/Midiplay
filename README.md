@@ -38,13 +38,14 @@ Midiplay can handle enough events that should satisfy most MIDI/MUS data.
   - Panning
   - All Notes Off
   - All Sounds Off
-  - Pitch Wheel (fixed 2 semitones up/down)
+  - Pitch Bend
   - Change Instrument
 - MIDI
   - After Touch (key pressure)
   - After Touch (channel pressure)
   - Tempo
   - Registered Parameter Number
+    - Pitch Bend Range
   - Data Entry
 
 ## Sources

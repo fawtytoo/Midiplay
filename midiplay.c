@@ -68,12 +68,20 @@ VOICE;
 
 typedef struct
 {
+    int     semitones;
+    int     cents;
+}
+NOTE;
+
+typedef struct
+{
     VOICE   *voice;
     int     instrument;
     int     volume;
     int     pan;
     int     sustain;
     int     bend;
+    NOTE    bendRange;
     int     expression;
     int     rpn;
 }
@@ -258,12 +266,13 @@ void Event_NoteOff()
     channel->voice = list.next;
 }
 
-void FrequencyStep(VOICE *voice, int bend)
+void FrequencyStep(VOICE *voice, CHANNEL *channel)
 {
     int index, octave;
 
-    octave = voice->note / 12;
-    index = (voice->note % 12) * 32 + bend;
+    index = voice->note * 32 + channel->bend * (channel->bendRange.semitones * 100 + channel->bendRange.cents) / 200;
+    octave = index / 384;
+    index %= 384;
     if (index < 0)
     {
         if (octave > 0)
@@ -318,7 +327,7 @@ void Event_NoteOn()
     voice->volume = volumeTable[volume];
     VoiceVolume(channel, voice);
     Synth_SetPan(voice->index, channel->pan);
-    FrequencyStep(voice, channel->bend);
+    FrequencyStep(voice, channel);
     Synth_KeyOn(voice->index);
     voice->playing = NOTE_PLAY;
 }
@@ -358,7 +367,7 @@ void Event_PitchWheel()
 
     while (voice)
     {
-        FrequencyStep(voice, channel->bend);
+        FrequencyStep(voice, channel);
         voice = voice->next;
     }
 }
@@ -483,10 +492,22 @@ void Event_ChangeInstrument()
 
 void DataEntry_Fine()
 {
+    CHANNEL *channel = &midChannel[eventData->channel];
+
+    if (channel->rpn == 0)
+    {
+        channel->bendRange.cents = eventData->data[1];
+    }
 }
 
 void DataEntry_Coarse()
 {
+    CHANNEL *channel = &midChannel[eventData->channel];
+
+    if (channel->rpn == 0)
+    {
+        channel->bendRange.semitones = eventData->data[1];
+    }
 }
 
 void Event_Message()
@@ -582,6 +603,8 @@ void InitTracks()
         midChannel[channel].instrument = 0;
         midChannel[channel].volume = volumeTable[100];
         midChannel[channel].pan = 64;
+        midChannel[channel].bendRange.semitones = 2;
+        midChannel[channel].bendRange.cents = 0;
         prevVolume[channel] = 0;
     }
 

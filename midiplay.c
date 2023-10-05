@@ -263,25 +263,17 @@ void FrequencyStep(VOICE *voice, CHANNEL *channel)
     int index, octave;
 
     index = voice->note * 32 + channel->bend * channel->bendRange / 2;
-    octave = index / 384;
-    index %= 384;
     if (index < 0)
     {
-        if (octave > 0)
-        {
-            octave--;
-            index += 384;
-        }
-        else
-        {
-            index = 0;
-        }
+        index = 0;
     }
-    else if (index >= 384)
+    else if (index > 128 * 32 - 1)
     {
-        octave++;
-        index -= 384;
+        index = 128 * 32 - 1;
     }
+
+    octave = index / 384;
+    index %= 384;
 
     Synth_SetFrequency(voice->index, index, octave);
 }

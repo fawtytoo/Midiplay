@@ -37,7 +37,6 @@ enum
     CC_07 = 7,   // volume
     CC_0a = 10,  // pan
     CC_0b = 11,  // expression
-    CC_26 = 38,  // data entry fine
     CC_40 = 64,  // sustain
     CC_64 = 100, // reg lsb
     CC_65 = 101, // reg msb
@@ -68,20 +67,13 @@ VOICE;
 
 typedef struct
 {
-    int     semitones;
-    int     cents;
-}
-NOTE;
-
-typedef struct
-{
     VOICE   *voice;
     int     instrument;
     int     volume;
     int     pan;
     int     sustain;
     int     bend;
-    NOTE    bendRange;
+    int     bendRange;
     int     expression;
     int     rpn;
 }
@@ -270,7 +262,7 @@ void FrequencyStep(VOICE *voice, CHANNEL *channel)
 {
     int index, octave;
 
-    index = voice->note * 32 + channel->bend * (channel->bendRange.semitones * 100 + channel->bendRange.cents) / 200;
+    index = voice->note * 32 + channel->bend * channel->bendRange / 2;
     octave = index / 384;
     index %= 384;
     if (index < 0)
@@ -490,23 +482,13 @@ void Event_ChangeInstrument()
     channel->instrument = eventData->data[1];
 }
 
-void DataEntry_Fine()
-{
-    CHANNEL *channel = &midChannel[eventData->channel];
-
-    if (channel->rpn == 0)
-    {
-        channel->bendRange.cents = eventData->data[1];
-    }
-}
-
 void DataEntry_Coarse()
 {
     CHANNEL *channel = &midChannel[eventData->channel];
 
     if (channel->rpn == 0)
     {
-        channel->bendRange.semitones = eventData->data[1];
+        channel->bendRange = eventData->data[1];
     }
 }
 
@@ -531,10 +513,6 @@ void Event_Message()
 
       case CC_0b:
         Event_Expression();
-        break;
-
-      case CC_26:
-        DataEntry_Fine();
         break;
 
       case CC_40: // FIXME
@@ -603,8 +581,7 @@ void InitTracks()
         midChannel[channel].instrument = 0;
         midChannel[channel].volume = volumeTable[100];
         midChannel[channel].pan = 64;
-        midChannel[channel].bendRange.semitones = 2;
-        midChannel[channel].bendRange.cents = 0;
+        midChannel[channel].bendRange = 2;
         prevVolume[channel] = 0;
     }
 

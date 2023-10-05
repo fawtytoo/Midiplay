@@ -45,6 +45,7 @@ Midiplay can handle enough events that should satisfy most MIDI/MUS data.
   - After Touch (channel pressure)
   - Tempo
   - Registered Parameter Number
+  - Data Entry
 
 ## Sources
 - [MUS format](https://moddingwiki.shikadi.net/wiki/MUS_Format)

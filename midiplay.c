@@ -33,9 +33,11 @@ enum
 {
     CC_NO = 255,
     CC_01 = 1,   // mod wheel
+    CC_06 = 6,   // data entry coarse
     CC_07 = 7,   // volume
     CC_0a = 10,  // pan
     CC_0b = 11,  // expression
+    CC_26 = 38,  // data entry fine
     CC_40 = 64,  // sustain
     CC_64 = 100, // reg lsb
     CC_65 = 101, // reg msb
@@ -479,11 +481,23 @@ void Event_ChangeInstrument()
     channel->instrument = eventData->data[1];
 }
 
+void DataEntry_Fine()
+{
+}
+
+void DataEntry_Coarse()
+{
+}
+
 void Event_Message()
 {
     switch (eventData->data[0])
     {
       case CC_01:
+        break;
+
+      case CC_06:
+        DataEntry_Coarse();
         break;
 
       case CC_07:
@@ -496,6 +510,10 @@ void Event_Message()
 
       case CC_0b:
         Event_Expression();
+        break;
+
+      case CC_26:
+        DataEntry_Fine();
         break;
 
       case CC_40: // FIXME

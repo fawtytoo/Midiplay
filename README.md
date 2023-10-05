@@ -31,20 +31,20 @@ The project is meant for educational purposes, and its focus is on event parsing
 This project deals with timing somewhat differently than many other MIDI projects. The timing is done using the delta-time values (ticks) only. The tick values and samples per tick are kept separate. Samples per tick are solely used for playback. This gives 2 advantages: ensures synchronisation across tracks, and less time is spent checking for new events. Incidentally, this is the reason why the SMPTE format is not supported.
 
 ### Events
-The library handles only a few basic events, but enough that would satisfy most MIDI/MUS data.
-- Note On
-- Note Off
-- Pitch Wheel (fixed 2 semitones up/down)
-- After Touch (key pressure)
-- After Touch (channel pressure)
-- Sustain (still broken)
-- Tempo (MIDI only)
-- Channel Volume
-- Panning
-- All Notes Off
-- All Sounds Off
-- Expression
-- Registered Parameter Number
+Midiplay can handle enough events that should satisfy most MIDI/MUS data.
+- MUS/MIDI
+  - Note On / Off
+  - Channel Volume & Expression
+  - Panning
+  - All Notes Off
+  - All Sounds Off
+  - Pitch Wheel (fixed 2 semitones up/down)
+  - Change Instrument
+- MIDI
+  - After Touch (key pressure)
+  - After Touch (channel pressure)
+  - Tempo
+  - Registered Parameter Number
 
 ## Sources
 - [MUS format](https://moddingwiki.shikadi.net/wiki/MUS_Format)

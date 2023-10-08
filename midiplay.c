@@ -92,7 +92,7 @@ UINT    volumeTable[128] =
 };
 
 CHANNEL midChannel[16];
-VOICE   midVoice[VOICES], *voiceOff = NULL;
+VOICE   midVoice[VOICES], *voiceHead, *voiceTail;
 
 EVENT   *eventData;
 
@@ -191,8 +191,16 @@ void Voice_Off(VOICE *voice)
 {
     Synth_KeyOff(voice->index);
 
-    voice->next = voiceOff;
-    voiceOff = voice;
+    voice->next = NULL;
+    if (voiceHead == NULL)
+    {
+        voiceHead = voice;
+    }
+    else
+    {
+        voiceTail->next = voice;
+    }
+    voiceTail = voice;
 }
 
 void VoiceVolume(CHANNEL *channel, VOICE *voice)
@@ -297,13 +305,13 @@ void Event_NoteOn()
         voice = voice->next;
     }
 
-    if (voiceOff == NULL)
+    if (voiceHead == NULL)
     {
         return;
     }
 
-    voice = voiceOff;
-    voiceOff = voiceOff->next;
+    voice = voiceHead;
+    voiceHead = voiceHead->next;
     voice->next = channel->voice;
     channel->voice = voice;
 
@@ -960,11 +968,13 @@ void Midiplay_Init(int samplerate)
     Timer_Set(&timerPhase, 65536, samplerate);
     Timer_Set(&timerSecond, MICROSEC, samplerate);
 
+    voiceHead = NULL;
+    voiceTail = voice;
     for (index = 0; index < VOICES; index++, voice++)
     {
         voice->index = index;
-        voice->next = voiceOff;
-        voiceOff = voice;
+        voice->next = voiceHead;
+        voiceHead = voice;
     }
 
     musicInit = 1;

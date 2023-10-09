@@ -100,6 +100,7 @@ EVENT   *eventData;
 #define MICROSEC    1000000
 
 typedef void (*DOEVENT)(void);
+void (*AddEvent)(DOEVENT);
 
 typedef struct
 {
@@ -659,6 +660,16 @@ UINT GetLength()
     return length;
 }
 
+void NoEvent(DOEVENT event)
+{
+    (void)event;
+}
+
+void NewEvent(DOEVENT event)
+{
+    curTrack->DoEvent = event;
+}
+
 int GetMusEvent(int *time)
 {
     BYTE    data, last;
@@ -675,7 +686,7 @@ int GetMusEvent(int *time)
     {
       case 0x00: // release note
         curTrack->event.data[0] = (*curTrack->pos++ & 0x7f);
-        curTrack->DoEvent = Event_NoteOff;
+        AddEvent(Event_NoteOff);
         break;
 
       case 0x10: // play note
@@ -693,29 +704,29 @@ int GetMusEvent(int *time)
         }
         if (curTrack->event.data[1] == 0)
         {
-            curTrack->DoEvent = Event_NoteOff;
+            AddEvent(Event_NoteOff);
         }
         else
         {
-            curTrack->DoEvent = Event_NoteOn;
+            AddEvent(Event_NoteOn);
         }
         break;
 
       case 0x20: // pitch wheel (adjusted to 14 bit value)
         curTrack->event.data[0] = (*curTrack->pos & 0x1) << 6;
         curTrack->event.data[1] = *curTrack->pos++ >> 1;
-        curTrack->DoEvent = Event_PitchWheel;
+        AddEvent(Event_PitchWheel);
         break;
 
       case 0x30: // system event
         curTrack->event.data[0] = controllerMap[*curTrack->pos++];
-        curTrack->DoEvent = Event_Message;
+        AddEvent(Event_Message);
         break;
 
       case 0x40: // change controller
         curTrack->event.data[0] = controllerMap[*curTrack->pos++];
         curTrack->event.data[1] = *curTrack->pos++;
-        curTrack->DoEvent = Event_Message;
+        AddEvent(Event_Message);
         break;
 
       case 0x50: // end of measure?
@@ -724,7 +735,7 @@ int GetMusEvent(int *time)
       case 0x60: // score end
         if (musicLooping)
         {
-            curTrack->DoEvent = InitTracks;
+            AddEvent(InitTracks);
         }
         else
         {
@@ -774,7 +785,7 @@ void GetMidEvent()
       case 0x80:
         curTrack->event.data[0] = *curTrack->pos++;
         curTrack->event.data[1] = *curTrack->pos++;
-        curTrack->DoEvent = Event_NoteOff;
+        AddEvent(Event_NoteOff);
         break;
 
       case 0x90:
@@ -782,42 +793,42 @@ void GetMidEvent()
         curTrack->event.data[1] = *curTrack->pos++;
         if (curTrack->event.data[1] == 0)
         {
-            curTrack->DoEvent = Event_NoteOff;
+            AddEvent(Event_NoteOff);
         }
         else
         {
-            curTrack->DoEvent = Event_NoteOn;
+            AddEvent(Event_NoteOn);
         }
         break;
 
       case 0xa0:
         curTrack->event.data[0] = *curTrack->pos++;
         curTrack->event.data[1] = *curTrack->pos++;
-        curTrack->DoEvent = Event_Aftertouch;
+        AddEvent(Event_Aftertouch);
         break;
 
       case 0xb0: // controller message
         curTrack->event.data[0] = *curTrack->pos++;
         curTrack->event.data[1] = *curTrack->pos++;
-        curTrack->DoEvent = Event_Message;
+        AddEvent(Event_Message);
         break;
 
       case 0xc0:
         // instrument number must be in 2nd byte of event.data
         //  as that's where MUS puts it
         curTrack->event.data[1] = *curTrack->pos++;
-        curTrack->DoEvent = Event_ChangeInstrument;
+        AddEvent(Event_ChangeInstrument);
         break;
 
       case 0xd0:
         curTrack->event.data[0] = *curTrack->pos++;
-        curTrack->DoEvent = Event_ChannelAftertouch;
+        AddEvent(Event_ChannelAftertouch);
         break;
 
       case 0xe0:
         curTrack->event.data[0] = *curTrack->pos++;
         curTrack->event.data[1] = *curTrack->pos++;
-        curTrack->DoEvent = Event_PitchWheel;
+        AddEvent(Event_PitchWheel);
         break;
 
       case 0xf0:
@@ -1075,10 +1086,12 @@ int Midiplay_Load(void *data, int size)
     InitTracks();
     musicLooping = 0;
 
+    AddEvent = NoEvent;
     while (numTracksEnded < numTracks)
     {
         UpdateEvents();
     }
+    AddEvent = NewEvent;
 
     musicInit = 2;
 

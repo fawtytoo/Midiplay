@@ -4,6 +4,8 @@
 
 #include "synth.h"
 
+#include "midiplay.h"
+
 #define ID(i, a)    (i[0] == a[0] && i[1] == a[1] && i[2] == a[2] && i[3] == a[3])
 
 #define LE16(i)     ((i)[0] | ((i)[1] << 8))
@@ -121,9 +123,9 @@ BYTE    prevVolume[16]; // last known note volume on channel
 int     beatTicks = 96, beatTempo = 500000;
 int     playSamples;
 int     musicClock;
-
+#ifdef DOTIME
 int     timeTicks, timeTempo;
-
+#endif
 DOEVENT MusicEvents;
 
 // controller map for MUS
@@ -552,13 +554,14 @@ void Event_Message()
 }
 
 // control ---------------------------------------------------------------------
+#ifdef DOTIME
 void UpdateScoreTime()
 {
     timeTempo += beatTempo;
     timeTicks += (timeTempo / MICROSEC);
     timeTempo %= MICROSEC;
 }
-
+#endif
 // sometimes, you just want nothing to happen
 void DoNothing()
 {
@@ -595,8 +598,9 @@ void InitTracks()
     ResetVoices();
 
     numTracksEnded = 0;
-
+#ifdef DOTIME
     timeTicks = timeTempo = 0;
+#endif
 }
 
 void SetTempo()
@@ -659,12 +663,12 @@ UINT GetLength()
 
     return length;
 }
-
+#ifdef DOTIME
 void NoEvent(DOEVENT event)
 {
     (void)event;
 }
-
+#endif
 void NewEvent(DOEVENT event)
 {
     curTrack->DoEvent = event;
@@ -916,7 +920,9 @@ void TrackMidEvents()
 
 void UpdateEvents()
 {
+#ifdef DOTIME
     UpdateScoreTime();
+#endif
     MusicEvents();
     musicClock++;
 }
@@ -987,6 +993,10 @@ void Midiplay_Init(int samplerate)
         voice->next = voiceHead;
         voiceHead = voice;
     }
+
+#ifndef DOTIME
+    AddEvent = NewEvent;
+#endif
 
     musicInit = 1;
 }
@@ -1085,14 +1095,14 @@ int Midiplay_Load(void *data, int size)
 
     InitTracks();
     musicLooping = 0;
-
+#ifdef DOTIME
     AddEvent = NoEvent;
     while (numTracksEnded < numTracks)
     {
         UpdateEvents();
     }
     AddEvent = NewEvent;
-
+#endif
     musicInit = 2;
 
     return 1;
@@ -1172,7 +1182,7 @@ void Midiplay_Output(short *output, int length)
         length -= 2;
     }
 }
-
+#ifdef DOTIME
 int Midiplay_Time()
 {
     if (musicInit < 2)
@@ -1182,7 +1192,7 @@ int Midiplay_Time()
 
     return timeTicks * 10 / beatTicks;
 }
-
+#endif
 void Midiplay_Loop(int looping)
 {
     musicLooping = looping;

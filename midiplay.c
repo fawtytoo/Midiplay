@@ -123,7 +123,7 @@ BYTE    prevVolume[16]; // last known note volume on channel
 int     beatTicks = 96, beatTempo = 500000;
 int     playSamples;
 int     musicClock;
-#ifdef DOTIME
+#ifdef MP_TIME
 int     timeTicks, timeTempo;
 #endif
 DOEVENT MusicEvents;
@@ -554,7 +554,7 @@ void Event_Message()
 }
 
 // control ---------------------------------------------------------------------
-#ifdef DOTIME
+#ifdef MP_TIME
 void UpdateScoreTime()
 {
     timeTempo += beatTempo;
@@ -598,7 +598,7 @@ void InitTracks()
     ResetVoices();
 
     numTracksEnded = 0;
-#ifdef DOTIME
+#ifdef MP_TIME
     timeTicks = timeTempo = 0;
 #endif
 }
@@ -663,7 +663,7 @@ UINT GetLength()
 
     return length;
 }
-#ifdef DOTIME
+#ifdef MP_TIME
 void NoEvent(DOEVENT event)
 {
     (void)event;
@@ -920,7 +920,7 @@ void TrackMidEvents()
 
 void UpdateEvents()
 {
-#ifdef DOTIME
+#ifdef MP_TIME
     UpdateScoreTime();
 #endif
     MusicEvents();
@@ -994,7 +994,7 @@ void Midiplay_Init(int samplerate)
         voiceHead = voice;
     }
 
-#ifndef DOTIME
+#ifndef MP_TIME
     AddEvent = NewEvent;
 #endif
 
@@ -1095,7 +1095,7 @@ int Midiplay_Load(void *data, int size)
 
     InitTracks();
     musicLooping = 0;
-#ifdef DOTIME
+#ifdef MP_TIME
     AddEvent = NoEvent;
     while (numTracksEnded < numTracks)
     {
@@ -1182,7 +1182,7 @@ void Midiplay_Output(short *output, int length)
         length -= 2;
     }
 }
-#ifdef DOTIME
+#ifdef MP_TIME
 int Midiplay_Time()
 {
     if (musicInit < 2)

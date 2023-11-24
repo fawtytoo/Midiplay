@@ -6,7 +6,7 @@
 #define __MIDIPLAY_H__
 
 // comment this line if the score time is not required
-//#define DOTIME
+#define MP_TIME
 
 // Midiplay_Init
 // samplerate   The samplerate of the audio output stream
@@ -44,7 +44,7 @@ int Midiplay_IsPlaying(void);
 
 // Calling this immediately after Midiplay_Load returns the length of the music
 // Calling this while Midiplay_IsPlaying returns the current position
-#ifdef DOTIME
+#ifdef MP_TIME
 int Midiplay_Time(void);
 #endif
 // Midiplay_Loop

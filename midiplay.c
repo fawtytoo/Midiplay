@@ -10,7 +10,6 @@
 
 #define LE16(i)     ((i)[0] | ((i)[1] << 8))
 #define BE16(i)     (((i)[0] << 8) | (i)[1])
-#define LE32(i)     (LE16(i) | (LE16(i + 2) << 16))
 #define BE32(i)     ((BE16(i) << 16) | BE16(i + 2))
 
 #define NULL        0
@@ -150,7 +149,6 @@ int     controllerMap[128] =
 };
 
 // midiplay --------------------------------------------------------------------
-#define RMI_HDRSIZE     20
 #define MUS_HDRSIZE     16
 #define MID_HDRSIZE     14
 
@@ -1016,37 +1014,6 @@ int Midiplay_Load(void *data, int size)
     if (size < 4)
     {
         return 0;
-    }
-
-    if (ID(byte, "RIFF"))
-    {
-        if (size < RMI_HDRSIZE)
-        {
-            return 0;
-        }
-
-        if (LE32(byte + 4) != size - 8)
-        {
-            return 0;
-        }
-
-        if (!ID((byte + 8), "RMID"))
-        {
-            return 0;
-        }
-
-        if (!ID((byte + 12), "data"))
-        {
-            return 0;
-        }
-
-        if (size - RMI_HDRSIZE < LE32(byte + 16))
-        {
-            return 0;
-        }
-        // adjust the size to the midi data chunk
-        size = LE32(byte + 16);
-        byte += RMI_HDRSIZE;
     }
 
     if (ID(byte, "MUS" "\x1a"))

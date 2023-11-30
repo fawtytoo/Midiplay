@@ -14,10 +14,15 @@
 
 #include "midiplay.h"
 
-#define ERROR       printf("%s %s\n\r", argv[arg], strerror(errno))
+#define ERROR           printf("%s %s\n\r", argv[arg], strerror(errno))
+#define INVALID_FILE    printf("Invalid file: %s\n\r", argv[arg])
 
-#define SAMPLERATE  44100
-#define SAMPLECOUNT 2048
+#define SAMPLERATE      44100
+#define SAMPLECOUNT     2048
+
+#define RMI_HDRSIZE     20
+
+typedef unsigned int    UINT;
 
 void sdlCallback(void *unused, Uint8 *buffer, int length)
 {
@@ -46,7 +51,8 @@ int main(int argc, char **argv)
 
     struct stat     status;
     FILE            *file;
-    char            *buffer;
+    char            *buffer, *data;
+    int             size;
 
     int             arg;
     char            *name;
@@ -112,11 +118,43 @@ int main(int argc, char **argv)
             continue;
         }
 
-        buffer = malloc(status.st_size);
-        fread(buffer, status.st_size, 1, file);
+        size = status.st_size;
+        buffer = malloc(size);
+        fread(buffer, size, 1, file);
         fclose(file);
 
-        if (Midiplay_Load(buffer, status.st_size))
+        data = buffer;
+        if (strncmp(data, "RIFF", 4) == 0)
+        {
+            if (size < RMI_HDRSIZE)
+            {
+                INVALID_FILE;
+                continue;
+            }
+
+            if (*(UINT *)(data + 4) != size - 8)
+            {
+                INVALID_FILE;
+                continue;
+            }
+
+            if (strncmp((data + 8), "RMIDdata", 8) != 0)
+            {
+                INVALID_FILE;
+                continue;
+            }
+
+            if (size - RMI_HDRSIZE < *(UINT *)(data + 16))
+            {
+                INVALID_FILE;
+                continue;
+            }
+            // adjust the size to the midi data chunk
+            size = *(UINT *)(data + 16);
+            data += RMI_HDRSIZE;
+        }
+
+        if (Midiplay_Load(data, size))
         {
             Midiplay_Loop(looping); // Midiplay_Load resets looping
 
@@ -190,7 +228,7 @@ int main(int argc, char **argv)
         }
         else
         {
-            printf("Invalid file: %s\n\r", argv[arg]);
+            INVALID_FILE;
         }
 
         free(buffer);

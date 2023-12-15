@@ -209,20 +209,16 @@ void VoiceVolume(CHANNEL *channel, VOICE *voice)
     Synth_SetVolume(voice->index, channel->volume * channel->expression * voice->volume >> 16);
 }
 
-void ResetVoices()
+void AllSoundOff(CHANNEL *channel)
 {
-    CHANNEL *channel = &midChannel[0];
     VOICE   *voice;
-    int     index;
 
-    for (index = 0; index < 16; index++, channel++)
+    while (channel->voice)
     {
-        while (channel->voice)
-        {
-            voice = channel->voice;
-            channel->voice = channel->voice->next;
-            Voice_Off(voice);
-        }
+        voice = channel->voice;
+        channel->voice = channel->voice->next;
+        Synth_SetVolume(voice->index, 0x00);
+        Voice_Off(voice);
     }
 }
 
@@ -531,7 +527,7 @@ void Event_Message()
         break;
 
       case CC_78:
-        ResetVoices();
+        AllSoundOff(&midChannel[eventData->channel]);
         break;
 
       case CC_79:
@@ -579,6 +575,7 @@ void InitTracks()
 
     for (channel = 0; channel < 16; channel++)
     {
+        AllSoundOff(&midChannel[channel]);
         ResetChannel(channel);
         midChannel[channel].instrument = 0;
         midChannel[channel].volume = volumeTable[100];
@@ -592,8 +589,6 @@ void InitTracks()
 
     beatTempo = 500000;
     Timer_Set(&timerBeat, beatTempo, beatTicks);
-
-    ResetVoices();
 
     numTracksEnded = 0;
 #ifdef MP_TIME

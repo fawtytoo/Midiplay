@@ -24,18 +24,18 @@
 
 typedef unsigned int    UINT;
 
-void sdlCallback(void *unused, Uint8 *buffer, int length)
+void SdlCallback(void *unused, Uint8 *buffer, int length)
 {
     (void)unused;
 
     Midiplay_Output((short *)buffer, length / 2);
 }
  
-int digits(int number, int count)
+int DoDigits(int number, int count)
 {
     if (number > 9)
     {
-        count = digits(number / 10, count + 1);
+        count = DoDigits(number / 10, count + 1);
     }
 
     return count;
@@ -81,7 +81,7 @@ int main(int argc, char **argv)
     want.format = AUDIO_S16SYS;
     want.channels = 2;
     want.samples = SAMPLECOUNT;
-    want.callback = sdlCallback;
+    want.callback = SdlCallback;
 
     SDL_OpenAudio(&want, NULL);
     SDL_PauseAudio(0);
@@ -167,11 +167,11 @@ int main(int argc, char **argv)
                 name++;
             }
 
-            count = digits(argc - 1, 1);
+            count = DoDigits(argc - 1, 1);
             printf("Playing %*i/%i: %s\r\n", count, arg, argc - 1, name);
 #ifdef MP_TIME
             time = Midiplay_Time();
-            count = digits(time / 600, 1);
+            count = DoDigits(time / 600, 1);
             printf("[  ] [    ] %*s / %i:%02i.%i\r", count + 5, " ", time / 600, (time / 10) % 60, time % 10);
 #else
             printf("[  ] [    ]\r");

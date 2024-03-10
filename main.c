@@ -62,7 +62,7 @@ int main(int argc, char **argv)
     int             count;
 
     int             looping = 0;
-    int             playing = 1;
+    int             playing = 0;
     int             volume = 100;
 
     char            key;

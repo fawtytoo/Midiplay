@@ -22,7 +22,7 @@ typedef struct
 }
 TIMER;
 
-TIMER   timerPhase, timerSecond, timerBeat;
+static TIMER    timerPhase, timerSecond, timerBeat;
 
 // event -----------------------------------------------------------------------
 #define NOTE_OFF        0
@@ -74,7 +74,7 @@ typedef struct
 }
 CHANNEL;
 
-UINT    volumeTable[128] =
+static UINT     volumeTable[128] =
 {
     0x000, 0x001, 0x002, 0x004, 0x005, 0x007, 0x008, 0x009, 0x00b, 0x00c, 0x00e, 0x00f, 0x011, 0x012, 0x014, 0x015,
     0x017, 0x018, 0x01a, 0x01b, 0x01d, 0x01f, 0x020, 0x022, 0x023, 0x025, 0x027, 0x028, 0x02a, 0x02b, 0x02d, 0x02f,
@@ -86,16 +86,15 @@ UINT    volumeTable[128] =
     0x0d7, 0x0da, 0x0dc, 0x0df, 0x0e2, 0x0e4, 0x0e7, 0x0ea, 0x0ec, 0x0ef, 0x0f2, 0x0f4, 0x0f7, 0x0fa, 0x0fd, 0x100
 };
 
-CHANNEL midChannel[16];
-VOICE   midVoice[VOICES], unusedVoice;
+static CHANNEL  midChannel[16];
+static VOICE    midVoice[VOICES], unusedVoice;
 
-EVENT   *eventData;
+static EVENT    *eventData;
 
 // control ---------------------------------------------------------------------
 #define MICROSEC    1000000
 
 typedef void (*DOEVENT)(void);
-void (*AddEvent)(DOEVENT);
 
 typedef struct
 {
@@ -108,37 +107,39 @@ typedef struct
 }
 TRACK;
 
-TRACK   midTrack[65536], *curTrack, *endTrack;
-int     numTracks, numTracksEnded;
+static TRACK    midTrack[65536], *curTrack, *endTrack;
+static int      numTracks, numTracksEnded;
 
-BYTE    prevVolume[16]; // last known note volume on channel
+static BYTE     prevVolume[16]; // last known note volume on channel
 
-int     beatTicks = 96, beatTempo = 500000;
-int     playSamples;
-int     musicClock;
+static int      beatTicks = 96, beatTempo = 500000;
+static int      playSamples;
+static int      musicClock;
 #ifdef MP_TIME
-int     timeTicks, timeTempo;
+static int      timeTicks, timeTempo;
 #endif
-DOEVENT MusicEvents;
+static DOEVENT  MusicEvents;
 
 // controller map for MUS
-int     controllerMap[16] = // CMD_TYPE would suggest only 16
+static int      controllerMap[16] = // CMD_TYPE would suggest only 16
 {
     CC_80, CC_ff, CC_01, CC_07, CC_0a, CC_0b, CC_ff, CC_ff,
     CC_40, CC_ff, CC_78, CC_7b, CC_ff, CC_ff, CC_79, CC_ff
 };
 
+static void (*AddEvent)(DOEVENT);
+
 // midiplay --------------------------------------------------------------------
 #define MUS_HDRSIZE     16
 #define MID_HDRSIZE     14
 
-int musicInit = 0;
-int musicLooping;
-int musicPlaying = 0;
-int musicVolume = 0x100;
+static int  musicInit = 0;
+static int  musicLooping;
+static int  musicPlaying = 0;
+static int  musicVolume = 0x100;
 
 // timer -----------------------------------------------------------------------
-int Timer_Update(TIMER *timer)
+static int Timer_Update(TIMER *timer)
 {
     timer->acc += timer->remainder;
     if (timer->acc < timer->divisor)
@@ -151,7 +152,7 @@ int Timer_Update(TIMER *timer)
     return timer->rate + 1;
 }
 
-void Timer_Set(TIMER *timer, int numerator, int divisor)
+static void Timer_Set(TIMER *timer, int numerator, int divisor)
 {
     timer->acc = 0;
     timer->rate = numerator / divisor;
@@ -160,7 +161,7 @@ void Timer_Set(TIMER *timer, int numerator, int divisor)
 }
 
 // event -----------------------------------------------------------------------
-void ResetChannel(int channel)
+static void ResetChannel(int channel)
 {
     midChannel[channel].sustain = 0;
     midChannel[channel].bend = 0;
@@ -168,7 +169,7 @@ void ResetChannel(int channel)
     midChannel[channel].rpn = (127 << 7) | 127;
 }
 
-void Voice_Off(VOICE *voice)
+static void Voice_Off(VOICE *voice)
 {
     Synth_KeyOff(voice->index);
 
@@ -181,12 +182,12 @@ void Voice_Off(VOICE *voice)
     voice->prev->next = voice;
 }
 
-void VoiceVolume(CHANNEL *channel, VOICE *voice)
+static void VoiceVolume(CHANNEL *channel, VOICE *voice)
 {
     Synth_SetVolume(voice->index, channel->volume * channel->expression * voice->volume >> 16);
 }
 
-void AllSoundOff(CHANNEL *channel)
+static void AllSoundOff(CHANNEL *channel)
 {
     while (channel->voice.next != &channel->voice)
     {
@@ -195,12 +196,12 @@ void AllSoundOff(CHANNEL *channel)
     }
 }
 
-void ResetControllers()
+static void ResetControllers()
 {
     ResetChannel(eventData->channel);
 }
 
-void Event_NoteOff()
+static void Event_NoteOff()
 {
     CHANNEL *channel = &midChannel[eventData->channel];
     int     note = eventData->data[0];
@@ -225,7 +226,7 @@ void Event_NoteOff()
     }
 }
 
-void FrequencyStep(VOICE *voice, CHANNEL *channel)
+static void FrequencyStep(VOICE *voice, CHANNEL *channel)
 {
     int index, octave;
 
@@ -245,7 +246,7 @@ void FrequencyStep(VOICE *voice, CHANNEL *channel)
     Synth_SetFrequency(voice->index, index, octave);
 }
 
-void Event_NoteOn()
+static void Event_NoteOn()
 {
     CHANNEL *channel = &midChannel[eventData->channel];
     int     note = eventData->data[0];
@@ -286,7 +287,7 @@ void Event_NoteOn()
     voice->playing = NOTE_PLAY;
 }
 
-void Event_MuteNotes()
+static void Event_MuteNotes()
 {
     CHANNEL *channel = &midChannel[eventData->channel];
     VOICE   *voice;
@@ -309,7 +310,7 @@ void Event_MuteNotes()
     }
 }
 
-void Event_PitchWheel()
+static void Event_PitchWheel()
 {
     CHANNEL *channel = &midChannel[eventData->channel];
     int     bend = ((eventData->data[0] & 0x7f) | (eventData->data[1] << 7));
@@ -324,7 +325,7 @@ void Event_PitchWheel()
     }
 }
 
-void Event_Aftertouch()
+static void Event_Aftertouch()
 {
     CHANNEL *channel = &midChannel[eventData->channel];
     int     note = eventData->data[0];
@@ -342,7 +343,7 @@ void Event_Aftertouch()
     }
 }
 
-void Event_Sustain()
+static void Event_Sustain()
 {
     CHANNEL *channel = &midChannel[eventData->channel];
     int     sustain = eventData->data[1];
@@ -368,7 +369,7 @@ void Event_Sustain()
     }
 }
 
-void Event_ChannelVolume()
+static void Event_ChannelVolume()
 {
     CHANNEL *channel = &midChannel[eventData->channel];
     int     volume = eventData->data[1];
@@ -383,7 +384,7 @@ void Event_ChannelVolume()
     }
 }
 
-void Event_Pan()
+static void Event_Pan()
 {
     CHANNEL *channel = &midChannel[eventData->channel];
     int     pan = eventData->data[1] & 0x7f;
@@ -398,7 +399,7 @@ void Event_Pan()
     }
 }
 
-void Event_ChannelAftertouch()
+static void Event_ChannelAftertouch()
 {
     CHANNEL *channel = &midChannel[eventData->channel];
     int     volume = eventData->data[0];
@@ -412,7 +413,7 @@ void Event_ChannelAftertouch()
     }
 }
 
-void Event_Expression()
+static void Event_Expression()
 {
     CHANNEL *channel = &midChannel[eventData->channel];
     int     expression = eventData->data[1] & 0x7f;
@@ -427,14 +428,14 @@ void Event_Expression()
     }
 }
 
-void Event_ChangeInstrument()
+static void Event_ChangeInstrument()
 {
     CHANNEL *channel = &midChannel[eventData->channel];
 
     channel->instrument = eventData->data[1];
 }
 
-void DataEntry_Coarse()
+static void DataEntry_Coarse()
 {
     CHANNEL *channel = &midChannel[eventData->channel];
 
@@ -444,7 +445,7 @@ void DataEntry_Coarse()
     }
 }
 
-void Event_Message()
+static void Event_Message()
 {
     switch (eventData->data[0])
     {
@@ -504,7 +505,7 @@ void Event_Message()
 
 // control ---------------------------------------------------------------------
 #ifdef MP_TIME
-void UpdateScoreTime()
+static void UpdateScoreTime()
 {
     timeTempo += beatTempo;
     timeTicks += (timeTempo / MICROSEC);
@@ -512,11 +513,11 @@ void UpdateScoreTime()
 }
 #endif
 // sometimes, you just want nothing to happen
-void DoNothing()
+static void DoNothing()
 {
 }
 
-void InitTracks()
+static void InitTracks()
 {
     int track, channel;
 
@@ -551,20 +552,20 @@ void InitTracks()
 #endif
 }
 
-void SetTempo()
+static void SetTempo()
 {
     // if the tempo changes, should playSamples be reset?
     beatTempo = (curTrack->event.data[0] << 16) | (curTrack->event.data[1] << 8) | curTrack->event.data[2];
     Timer_Set(&timerBeat, beatTempo, beatTicks);
 }
 
-void EndOfTrack()
+static void EndOfTrack()
 {
     curTrack->done = 1;
     numTracksEnded++;
 }
 
-void EndOfMidiTrack()
+static void EndOfMidiTrack()
 {
     EndOfTrack();
     curTrack->DoEvent = DoNothing;
@@ -585,7 +586,7 @@ void EndOfMidiTrack()
     // eventData does not need to be set
 }
 
-UINT GetLength()
+static UINT GetLength()
 {
     UINT    length;
     BYTE    data;
@@ -612,17 +613,17 @@ UINT GetLength()
     return length;
 }
 #ifdef MP_TIME
-void NoEvent(DOEVENT event)
+static void NoEvent(DOEVENT event)
 {
     (void)event;
 }
 #endif
-void NewEvent(DOEVENT event)
+static void NewEvent(DOEVENT event)
 {
     curTrack->DoEvent = event;
 }
 
-int GetMusEvent(int *time)
+static int GetMusEvent(int *time)
 {
     BYTE    data, last;
 
@@ -712,7 +713,7 @@ int GetMusEvent(int *time)
     return last;
 }
 
-void GetMidEvent()
+static void GetMidEvent()
 {
     BYTE    data, event = 0x0;
     UINT    length;
@@ -812,7 +813,7 @@ void GetMidEvent()
     }
 }
 
-void TrackMusEvents()
+static void TrackMusEvents()
 {
     int ticks;
 
@@ -833,7 +834,7 @@ void TrackMusEvents()
     curTrack->clock += ticks;
 }
 
-void TrackMidEvents()
+static void TrackMidEvents()
 {
     int ticks;
 
@@ -866,7 +867,7 @@ void TrackMidEvents()
     while (curTrack <= endTrack);
 }
 
-void UpdateEvents()
+static void UpdateEvents()
 {
 #ifdef MP_TIME
     UpdateScoreTime();
@@ -875,7 +876,7 @@ void UpdateEvents()
     musicClock++;
 }
 
-void LoadMusTrack(BYTE *data)
+static void LoadMusTrack(BYTE *data)
 {
     midTrack[0].data = data;
     curTrack = &midTrack[0];
@@ -886,7 +887,7 @@ void LoadMusTrack(BYTE *data)
     MusicEvents = TrackMusEvents;
 }
 
-int LoadMidTracks(int count, BYTE *data, int size)
+static int LoadMidTracks(int count, BYTE *data, int size)
 {
     int track, length;
 

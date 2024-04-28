@@ -12,8 +12,6 @@
 #define BE16(i)     (((i)[0] << 8) | (i)[1])
 #define BE32(i)     ((BE16(i) << 16) | BE16(i + 2))
 
-#define NULL        0
-
 // timer -----------------------------------------------------------------------
 typedef struct
 {
@@ -51,20 +49,20 @@ typedef struct
 }
 EVENT;
 
-typedef struct _voice
+typedef struct _voice   VOICE;
+struct _voice
 {
+    VOICE   *prev, *next;
+
     int     index;
     int     note;
     int     volume;
     int     playing;
-
-    struct _voice   *next;
-}
-VOICE;
+};
 
 typedef struct
 {
-    VOICE   *voice;
+    VOICE   voice;
     int     instrument;
     int     volume;
     int     pan;
@@ -89,7 +87,7 @@ UINT    volumeTable[128] =
 };
 
 CHANNEL midChannel[16];
-VOICE   midVoice[VOICES], *voiceHead, *voiceTail;
+VOICE   midVoice[VOICES], unusedVoice;
 
 EVENT   *eventData;
 
@@ -174,16 +172,13 @@ void Voice_Off(VOICE *voice)
 {
     Synth_KeyOff(voice->index);
 
-    voice->next = NULL;
-    if (voiceHead == NULL)
-    {
-        voiceHead = voice;
-    }
-    else
-    {
-        voiceTail->next = voice;
-    }
-    voiceTail = voice;
+    voice->prev->next = voice->next;
+    voice->next->prev = voice->prev;
+
+    voice->next = &unusedVoice;
+    voice->prev = unusedVoice.prev;
+    unusedVoice.prev = voice;
+    voice->prev->next = voice;
 }
 
 void VoiceVolume(CHANNEL *channel, VOICE *voice)
@@ -193,14 +188,10 @@ void VoiceVolume(CHANNEL *channel, VOICE *voice)
 
 void AllSoundOff(CHANNEL *channel)
 {
-    VOICE   *voice;
-
-    while (channel->voice)
+    while (channel->voice.next != &channel->voice)
     {
-        voice = channel->voice;
-        channel->voice = channel->voice->next;
-        Synth_SetVolume(voice->index, 0x00);
-        Voice_Off(voice);
+        Synth_SetVolume(channel->voice.next->index, 0x00);
+        Voice_Off(channel->voice.next);
     }
 }
 
@@ -214,35 +205,24 @@ void Event_NoteOff()
     CHANNEL *channel = &midChannel[eventData->channel];
     int     note = eventData->data[0];
     //int         volume = eventData->data[1];
-    VOICE   *voice = channel->voice, list, *ptr = &list;
+    VOICE   *voice = channel->voice.next;
 
-    list.next = NULL;
-
-    while (voice)
+    while (voice != &channel->voice)
     {
         if (voice->note == note)
         {
             if (channel->sustain)
             {
                 voice->playing = NOTE_OFF;
-                ptr->next = voice;
-                ptr = ptr->next;
             }
             else
             {
-                ptr->next = voice->next;
-                Voice_Off(voice);
+                voice = voice->prev;
+                Voice_Off(voice->next);
             }
         }
-        else
-        {
-            ptr->next = voice;
-            ptr = ptr->next;
-        }
-        voice = ptr->next;
+        voice = voice->next;
     }
-
-    channel->voice = list.next;
 }
 
 void FrequencyStep(VOICE *voice, CHANNEL *channel)
@@ -270,29 +250,32 @@ void Event_NoteOn()
     CHANNEL *channel = &midChannel[eventData->channel];
     int     note = eventData->data[0];
     int     volume = eventData->data[1];
-    VOICE   *voice = channel->voice;
+    VOICE   *voice;
 
-    while (voice)
+    voice = channel->voice.next;
+    while (voice != &channel->voice)
     {
         if (voice->note == note)
         {
             voice->volume = volumeTable[volume];
             VoiceVolume(channel, voice);
             voice->playing = NOTE_PLAY;
-            return;
         }
         voice = voice->next;
     }
 
-    if (voiceHead == NULL)
+    if (unusedVoice.next == &unusedVoice)
     {
         return;
     }
 
-    voice = voiceHead;
-    voiceHead = voiceHead->next;
-    voice->next = channel->voice;
-    channel->voice = voice;
+    voice = unusedVoice.next;
+    unusedVoice.next = voice->next;
+    voice->next->prev = &unusedVoice;
+    voice->next = channel->voice.next;
+    voice->next->prev = voice;
+    channel->voice.next = voice;
+    voice->prev = &channel->voice;
 
     voice->note = note;
     voice->volume = volumeTable[volume];
@@ -310,18 +293,16 @@ void Event_MuteNotes()
 
     if (!channel->sustain)
     {
-        while (channel->voice)
+        while (channel->voice.next != &channel->voice)
         {
-            voice = channel->voice;
-            channel->voice = channel->voice->next;
-            Voice_Off(voice);
+            Voice_Off(channel->voice.next);
         }
 
         return;
     }
 
-    voice = channel->voice;
-    while (voice)
+    voice = channel->voice.next;
+    while (voice != &channel->voice)
     {
         voice->playing = NOTE_OFF;
         voice = voice->next;
@@ -332,11 +313,11 @@ void Event_PitchWheel()
 {
     CHANNEL *channel = &midChannel[eventData->channel];
     int     bend = ((eventData->data[0] & 0x7f) | (eventData->data[1] << 7));
-    VOICE   *voice = channel->voice;
+    VOICE   *voice = channel->voice.next;
 
     channel->bend = (bend >> 7) - 64; // 7 bit values
 
-    while (voice)
+    while (voice != &channel->voice)
     {
         FrequencyStep(voice, channel);
         voice = voice->next;
@@ -348,9 +329,9 @@ void Event_Aftertouch()
     CHANNEL *channel = &midChannel[eventData->channel];
     int     note = eventData->data[0];
     int     volume = eventData->data[1];
-    VOICE   *voice = channel->voice;
+    VOICE   *voice = channel->voice.next;
 
-    while (voice)
+    while (voice != &channel->voice)
     {
         if (voice->note == note)
         {
@@ -365,7 +346,7 @@ void Event_Sustain()
 {
     CHANNEL *channel = &midChannel[eventData->channel];
     int     sustain = eventData->data[1];
-    VOICE   *voice = channel->voice, list, *ptr = &list;
+    VOICE   *voice;
 
     channel->sustain = sustain < 64 ? 0 : 1;
 
@@ -374,36 +355,28 @@ void Event_Sustain()
         return;
     }
 
-    list.next = NULL;
-
-    while (voice)
+    voice = channel->voice.next;
+    while (voice != &channel->voice)
     {
         if (voice->playing == NOTE_OFF)
         {
-            ptr->next = voice->next;
-            Voice_Off(voice);
-        }
-        else
-        {
-            ptr->next = voice;
-            ptr = ptr->next;
+            voice = voice->prev;
+            Voice_Off(voice->next);
         }
 
-        voice = ptr->next;
+        voice = voice->next;
     }
-
-    channel->voice = list.next;
 }
 
 void Event_ChannelVolume()
 {
     CHANNEL *channel = &midChannel[eventData->channel];
     int     volume = eventData->data[1];
-    VOICE   *voice = channel->voice;
+    VOICE   *voice = channel->voice.next;
 
     channel->volume = volumeTable[volume & 0x7f];
 
-    while (voice)
+    while (voice != &channel->voice)
     {
         VoiceVolume(channel, voice);
         voice = voice->next;
@@ -414,11 +387,11 @@ void Event_Pan()
 {
     CHANNEL *channel = &midChannel[eventData->channel];
     int     pan = eventData->data[1] & 0x7f;
-    VOICE   *voice = channel->voice;
+    VOICE   *voice = channel->voice.next;
 
     channel->pan = pan;
 
-    while (voice)
+    while (voice != &channel->voice)
     {
         Synth_SetPan(voice->index, pan);
         voice = voice->next;
@@ -429,9 +402,9 @@ void Event_ChannelAftertouch()
 {
     CHANNEL *channel = &midChannel[eventData->channel];
     int     volume = eventData->data[0];
-    VOICE   *voice = channel->voice;
+    VOICE   *voice = channel->voice.next;
 
-    while (voice)
+    while (voice != &channel->voice)
     {
         voice->volume = volumeTable[volume];
         VoiceVolume(channel, voice);
@@ -443,11 +416,11 @@ void Event_Expression()
 {
     CHANNEL *channel = &midChannel[eventData->channel];
     int     expression = eventData->data[1] & 0x7f;
-    VOICE   *voice = channel->voice;
+    VOICE   *voice = channel->voice.next;
 
     channel->expression = volumeTable[expression];
 
-    while (voice)
+    while (voice != &channel->voice)
     {
         VoiceVolume(channel, voice);
         voice = voice->next;
@@ -954,19 +927,30 @@ int LoadMidTracks(int count, BYTE *data, int size)
 // midiplay --------------------------------------------------------------------
 void Midiplay_Init(int samplerate)
 {
-    VOICE   *voice = &midVoice[0];
+    VOICE   *voice;
+    CHANNEL *channel;
     int     index;
 
     Timer_Set(&timerPhase, 65536, samplerate);
     Timer_Set(&timerSecond, MICROSEC, samplerate);
 
-    voiceHead = NULL;
-    voiceTail = voice;
+    unusedVoice.next = &unusedVoice;
+    unusedVoice.prev = &unusedVoice;
+    voice = &midVoice[0];
     for (index = 0; index < VOICES; index++, voice++)
     {
         voice->index = index;
-        voice->next = voiceHead;
-        voiceHead = voice;
+        voice->next = &unusedVoice;
+        voice->prev = unusedVoice.prev;
+        unusedVoice.prev = voice;
+        voice->prev->next = voice;
+    }
+
+    channel = &midChannel[0];
+    for (index = 0; index < 16; index++, channel++)
+    {
+        channel->voice.next = &channel->voice;
+        channel->voice.prev = &channel->voice;
     }
 
 #ifndef MP_TIME

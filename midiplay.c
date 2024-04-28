@@ -30,23 +30,19 @@ TIMER   timerPhase, timerSecond, timerBeat;
 #define NOTE_OFF        0
 #define NOTE_PLAY       1
 
-enum
-{
-    CC_NO = 255,
-    CC_01 = 1,   // mod wheel
-    CC_06 = 6,   // data entry coarse
-    CC_07 = 7,   // volume
-    CC_0a = 10,  // pan
-    CC_0b = 11,  // expression
-    CC_40 = 64,  // sustain
-    CC_64 = 100, // reg lsb
-    CC_65 = 101, // reg msb
-    CC_78 = 120, // all sounds off
-    CC_79 = 121, // reset controllers
-    CC_7b = 123, // all notes off
-    // the following message values are MUS only and have bit 7 set
-    CC_80 = 128  // MUS instrument change
-};
+#define CC_01           1   // mod wheel
+#define CC_06           6   // data entry coarse
+#define CC_07           7   // volume
+#define CC_0a           10  // pan
+#define CC_0b           11  // expression
+#define CC_40           64  // sustain
+#define CC_64           100 // reg lsb
+#define CC_65           101 // reg msb
+#define CC_78           120 // all sounds off
+#define CC_79           121 // reset controllers
+#define CC_7b           123 // all notes off
+#define CC_80           128 // MUS instrument change
+#define CC_ff           255
 
 typedef struct
 {
@@ -128,24 +124,10 @@ int     timeTicks, timeTempo;
 DOEVENT MusicEvents;
 
 // controller map for MUS
-int     controllerMap[128] =
+int     controllerMap[16] = // CMD_TYPE would suggest only 16
 {
-    CC_80, CC_NO, CC_01, CC_07, CC_0a, CC_0b, CC_NO, CC_NO,
-    CC_40, CC_NO, CC_78, CC_7b, CC_NO, CC_NO, CC_79, CC_NO,
-    CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO,
-    CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO,
-    CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO,
-    CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO,
-    CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO,
-    CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO,
-    CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO,
-    CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO,
-    CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO,
-    CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO,
-    CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO,
-    CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO,
-    CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO,
-    CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO, CC_NO
+    CC_80, CC_ff, CC_01, CC_07, CC_0a, CC_0b, CC_ff, CC_ff,
+    CC_40, CC_ff, CC_78, CC_7b, CC_ff, CC_ff, CC_79, CC_ff
 };
 
 // midiplay --------------------------------------------------------------------
@@ -542,7 +524,7 @@ void Event_Message()
         Event_ChangeInstrument();
         break;
 
-      default:
+      default: // event not handled
         break;
     }
 }
@@ -716,12 +698,12 @@ int GetMusEvent(int *time)
         break;
 
       case 0x30: // system event
-        curTrack->event.data[0] = controllerMap[*curTrack->pos++];
+        curTrack->event.data[0] = controllerMap[*curTrack->pos++ & 0x0f];
         AddEvent(Event_Message);
         break;
 
       case 0x40: // change controller
-        curTrack->event.data[0] = controllerMap[*curTrack->pos++];
+        curTrack->event.data[0] = controllerMap[*curTrack->pos++ & 0x0f];
         curTrack->event.data[1] = *curTrack->pos++;
         AddEvent(Event_Message);
         break;

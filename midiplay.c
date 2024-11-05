@@ -86,7 +86,25 @@ static UINT     volumeTable[128] =
     0x0d7, 0x0da, 0x0dc, 0x0df, 0x0e2, 0x0e4, 0x0e7, 0x0ea, 0x0ec, 0x0ef, 0x0f2, 0x0f4, 0x0f7, 0x0fa, 0x0fd, 0x100
 };
 
-static CHANNEL  midChannel[16];
+static CHANNEL  midChannel[16] =
+{
+    {.voice = {.prev = &midChannel[0].voice, .next = &midChannel[0].voice}},
+    {.voice = {.prev = &midChannel[1].voice, .next = &midChannel[1].voice}},
+    {.voice = {.prev = &midChannel[2].voice, .next = &midChannel[2].voice}},
+    {.voice = {.prev = &midChannel[3].voice, .next = &midChannel[3].voice}},
+    {.voice = {.prev = &midChannel[4].voice, .next = &midChannel[4].voice}},
+    {.voice = {.prev = &midChannel[5].voice, .next = &midChannel[5].voice}},
+    {.voice = {.prev = &midChannel[6].voice, .next = &midChannel[6].voice}},
+    {.voice = {.prev = &midChannel[7].voice, .next = &midChannel[7].voice}},
+    {.voice = {.prev = &midChannel[8].voice, .next = &midChannel[8].voice}},
+    {.voice = {.prev = &midChannel[9].voice, .next = &midChannel[9].voice}},
+    {.voice = {.prev = &midChannel[10].voice, .next = &midChannel[10].voice}},
+    {.voice = {.prev = &midChannel[11].voice, .next = &midChannel[11].voice}},
+    {.voice = {.prev = &midChannel[12].voice, .next = &midChannel[12].voice}},
+    {.voice = {.prev = &midChannel[13].voice, .next = &midChannel[13].voice}},
+    {.voice = {.prev = &midChannel[14].voice, .next = &midChannel[14].voice}},
+    {.voice = {.prev = &midChannel[15].voice, .next = &midChannel[15].voice}}
+};
 static VOICE    midVoice[VOICES], unusedVoice;
 
 static EVENT    *eventData;
@@ -929,7 +947,6 @@ static int LoadMidTracks(int count, BYTE *data, int size)
 void Midiplay_Init(int samplerate)
 {
     VOICE   *voice;
-    CHANNEL *channel;
     int     index;
 
     Timer_Set(&timerPhase, 65536, samplerate);
@@ -945,13 +962,6 @@ void Midiplay_Init(int samplerate)
         voice->prev = unusedVoice.prev;
         unusedVoice.prev = voice;
         voice->prev->next = voice;
-    }
-
-    channel = &midChannel[0];
-    for (index = 0; index < 16; index++, channel++)
-    {
-        channel->voice.next = &channel->voice;
-        channel->voice.prev = &channel->voice;
     }
 
 #ifndef MP_TIME

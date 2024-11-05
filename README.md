@@ -26,7 +26,7 @@ Playback is done using a square wave, because this is the simplest wave to creat
 The code is written to be as efficient as possible using function pointers to handle events, eliminating unnecessary conditional checks. MIDI data is assumed to be completely valid, and only basic checks are made on loading the data into memory.
 
 ### Focus
-The project is meant for educational purposes, and its focus is on event parsing and timing accuracy, rather than dealing with all possible events and instrument sounds. This makes Midiplay a very solid MIDI player.
+The project is meant for educational purposes, and its focus is on event parsing and timing accuracy, rather than dealing with all possible events and instrument sounds. However, Midiplay a very robust MIDI player.
 
 This project deals with timing somewhat differently than many other MIDI projects. The timing is done using the delta-time values (ticks) only. The tick values and samples per tick are kept separate. Samples per tick are solely used for playback. This gives 2 advantages: ensures synchronisation across tracks, and less time is spent checking for new events. Incidentally, this is the reason why the SMPTE format is not supported.
 

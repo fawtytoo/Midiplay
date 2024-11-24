@@ -592,7 +592,7 @@ static void EndOfMidiTrack()
         return;
     }
 
-    if (musicLooping == 0)
+    if (musicLooping == 0 || musicInit < 2)
     {
         musicPlaying = 0;
         return;
@@ -704,15 +704,16 @@ static int GetMusEvent(int *time)
         break;
 
       case 0x60: // score end
-        if (musicLooping)
+        last = 1;
+        if (musicLooping && musicInit == 2)
         {
             AddEvent(InitTracks);
+            last = 0;
         }
         else
         {
             curTrack->DoEvent = EndOfTrack;
         }
-        last = 1 - musicLooping;
         break;
 
       case 0x70:
@@ -837,6 +838,7 @@ static void TrackMusEvents()
 
     if (curTrack->done)
     {
+        musicPlaying = 0;
         return;
     }
 
@@ -1033,7 +1035,7 @@ int Midiplay_Load(void *data, int size)
     }
 
     InitTracks();
-    musicLooping = 0;
+
 #ifdef MP_TIME
     AddEvent = NoEvent;
     while (numTracksEnded < numTracks)

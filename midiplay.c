@@ -42,13 +42,6 @@ static TIMER    timerPhase, timerSecond, timerBeat;
 #define CC_80           128 // MUS instrument change
 #define CC_ff           255
 
-typedef struct
-{
-    BYTE    channel;
-    BYTE    data[3];
-}
-EVENT;
-
 typedef struct _voice   VOICE;
 struct _voice
 {
@@ -107,8 +100,6 @@ static CHANNEL  midChannel[16] =
 };
 static VOICE    midVoice[VOICES], unusedVoice;
 
-static EVENT    *eventData;
-
 // control ---------------------------------------------------------------------
 #define MICROSEC    1000000
 
@@ -116,11 +107,12 @@ typedef void (*DOEVENT)(void);
 
 typedef struct
 {
-    BYTE    *data, *pos;
+    BYTE    *track, *pos;
     int     clock; // accumulator
     BYTE    running;
     DOEVENT DoEvent;
-    EVENT   event;
+    BYTE    channel;
+    BYTE    data[3];
     int     done;
 }
 TRACK;
@@ -216,14 +208,14 @@ static void AllSoundOff(CHANNEL *channel)
 
 static void ResetControllers()
 {
-    ResetChannel(eventData->channel);
+    ResetChannel(curTrack->channel);
 }
 
 static void Event_NoteOff()
 {
-    CHANNEL *channel = &midChannel[eventData->channel];
-    int     note = eventData->data[0];
-    //int         volume = eventData->data[1];
+    CHANNEL *channel = &midChannel[curTrack->channel];
+    int     note = curTrack->data[0];
+    //int         volume = curTrack->data[1];
     VOICE   *voice = channel->voice.next;
 
     while (voice != &channel->voice)
@@ -266,9 +258,9 @@ static void FrequencyStep(VOICE *voice, CHANNEL *channel)
 
 static void Event_NoteOn()
 {
-    CHANNEL *channel = &midChannel[eventData->channel];
-    int     note = eventData->data[0];
-    int     volume = eventData->data[1];
+    CHANNEL *channel = &midChannel[curTrack->channel];
+    int     note = curTrack->data[0];
+    int     volume = curTrack->data[1];
     VOICE   *voice;
 
     voice = channel->voice.next;
@@ -307,7 +299,7 @@ static void Event_NoteOn()
 
 static void Event_MuteNotes()
 {
-    CHANNEL *channel = &midChannel[eventData->channel];
+    CHANNEL *channel = &midChannel[curTrack->channel];
     VOICE   *voice;
 
     if (!channel->sustain)
@@ -330,8 +322,8 @@ static void Event_MuteNotes()
 
 static void Event_PitchWheel()
 {
-    CHANNEL *channel = &midChannel[eventData->channel];
-    int     bend = ((eventData->data[0] & 0x7f) | (eventData->data[1] << 7));
+    CHANNEL *channel = &midChannel[curTrack->channel];
+    int     bend = ((curTrack->data[0] & 0x7f) | (curTrack->data[1] << 7));
     VOICE   *voice = channel->voice.next;
 
     channel->bend = (bend >> 7) - 64; // 7 bit values
@@ -345,9 +337,9 @@ static void Event_PitchWheel()
 
 static void Event_Aftertouch()
 {
-    CHANNEL *channel = &midChannel[eventData->channel];
-    int     note = eventData->data[0];
-    int     volume = eventData->data[1];
+    CHANNEL *channel = &midChannel[curTrack->channel];
+    int     note = curTrack->data[0];
+    int     volume = curTrack->data[1];
     VOICE   *voice = channel->voice.next;
 
     while (voice != &channel->voice)
@@ -363,8 +355,8 @@ static void Event_Aftertouch()
 
 static void Event_Sustain()
 {
-    CHANNEL *channel = &midChannel[eventData->channel];
-    int     sustain = eventData->data[1];
+    CHANNEL *channel = &midChannel[curTrack->channel];
+    int     sustain = curTrack->data[1];
     VOICE   *voice;
 
     channel->sustain = sustain < 64 ? 0 : 1;
@@ -389,8 +381,8 @@ static void Event_Sustain()
 
 static void Event_ChannelVolume()
 {
-    CHANNEL *channel = &midChannel[eventData->channel];
-    int     volume = eventData->data[1];
+    CHANNEL *channel = &midChannel[curTrack->channel];
+    int     volume = curTrack->data[1];
     VOICE   *voice = channel->voice.next;
 
     channel->volume = volumeTable[volume & 0x7f];
@@ -404,8 +396,8 @@ static void Event_ChannelVolume()
 
 static void Event_Pan()
 {
-    CHANNEL *channel = &midChannel[eventData->channel];
-    int     pan = eventData->data[1] & 0x7f;
+    CHANNEL *channel = &midChannel[curTrack->channel];
+    int     pan = curTrack->data[1] & 0x7f;
     VOICE   *voice = channel->voice.next;
 
     channel->pan = pan;
@@ -419,8 +411,8 @@ static void Event_Pan()
 
 static void Event_ChannelAftertouch()
 {
-    CHANNEL *channel = &midChannel[eventData->channel];
-    int     volume = eventData->data[0];
+    CHANNEL *channel = &midChannel[curTrack->channel];
+    int     volume = curTrack->data[0];
     VOICE   *voice = channel->voice.next;
 
     while (voice != &channel->voice)
@@ -433,8 +425,8 @@ static void Event_ChannelAftertouch()
 
 static void Event_Expression()
 {
-    CHANNEL *channel = &midChannel[eventData->channel];
-    int     expression = eventData->data[1] & 0x7f;
+    CHANNEL *channel = &midChannel[curTrack->channel];
+    int     expression = curTrack->data[1] & 0x7f;
     VOICE   *voice = channel->voice.next;
 
     channel->expression = volumeTable[expression];
@@ -448,24 +440,24 @@ static void Event_Expression()
 
 static void Event_ChangeInstrument()
 {
-    CHANNEL *channel = &midChannel[eventData->channel];
+    CHANNEL *channel = &midChannel[curTrack->channel];
 
-    channel->instrument = eventData->data[1];
+    channel->instrument = curTrack->data[1];
 }
 
 static void DataEntry_Coarse()
 {
-    CHANNEL *channel = &midChannel[eventData->channel];
+    CHANNEL *channel = &midChannel[curTrack->channel];
 
     if (channel->rpn == 0)
     {
-        channel->bendRange = eventData->data[1];
+        channel->bendRange = curTrack->data[1];
     }
 }
 
 static void Event_Message()
 {
-    switch (eventData->data[0])
+    switch (curTrack->data[0])
     {
       case CC_01:
         break;
@@ -491,17 +483,17 @@ static void Event_Message()
         break;
 
       case CC_64:
-        midChannel[eventData->channel].rpn &= (127 << 7);
-        midChannel[eventData->channel].rpn |= eventData->data[1];
+        midChannel[curTrack->channel].rpn &= (127 << 7);
+        midChannel[curTrack->channel].rpn |= curTrack->data[1];
         break;
 
       case CC_65:
-        midChannel[eventData->channel].rpn &= 127;
-        midChannel[eventData->channel].rpn |= (eventData->data[1] << 7);
+        midChannel[curTrack->channel].rpn &= 127;
+        midChannel[curTrack->channel].rpn |= (curTrack->data[1] << 7);
         break;
 
       case CC_78:
-        AllSoundOff(&midChannel[eventData->channel]);
+        AllSoundOff(&midChannel[curTrack->channel]);
         break;
 
       case CC_79:
@@ -541,7 +533,7 @@ static void InitTracks()
 
     for (track = 0; track < numTracks; track++)
     {
-        midTrack[track].pos = midTrack[track].data;
+        midTrack[track].pos = midTrack[track].track;
         midTrack[track].done = 0;
         midTrack[track].clock = 0;
         midTrack[track].DoEvent = DoNothing;
@@ -573,7 +565,7 @@ static void InitTracks()
 static void SetTempo()
 {
     // if the tempo changes, should playSamples be reset?
-    beatTempo = (curTrack->event.data[0] << 16) | (curTrack->event.data[1] << 8) | curTrack->event.data[2];
+    beatTempo = (curTrack->data[0] << 16) | (curTrack->data[1] << 8) | curTrack->data[2];
     Timer_Set(&timerBeat, beatTempo, beatTicks);
 }
 
@@ -601,7 +593,6 @@ static void EndOfMidiTrack()
     InitTracks();
     // at this point we need to parse a new event from track 0
     curTrack = &midTrack[0];
-    // eventData does not need to be set
 }
 
 static UINT GetLength()
@@ -648,7 +639,7 @@ static int GetMusEvent(int *time)
     curTrack->DoEvent = DoNothing;
 
     data = *curTrack->pos++;
-    curTrack->event.channel = data & 0x0f;
+    curTrack->channel = data & 0x0f;
     last = data & 0x80;
 
     *time = 0;
@@ -656,24 +647,24 @@ static int GetMusEvent(int *time)
     switch (data & 0x70)
     {
       case 0x00: // release note
-        curTrack->event.data[0] = (*curTrack->pos++ & 0x7f);
+        curTrack->data[0] = (*curTrack->pos++ & 0x7f);
         AddEvent(Event_NoteOff);
         break;
 
       case 0x10: // play note
         data = *curTrack->pos++;
-        curTrack->event.data[0] = (data & 0x7f);
+        curTrack->data[0] = (data & 0x7f);
         if (data & 0x80)
         {
-            curTrack->event.data[1] = *curTrack->pos++ & 0x7f;
+            curTrack->data[1] = *curTrack->pos++ & 0x7f;
             // should the volume be saved if the value is 0?
-            prevVolume[curTrack->event.channel] = curTrack->event.data[1];
+            prevVolume[curTrack->channel] = curTrack->data[1];
         }
         else
         {
-            curTrack->event.data[1] = prevVolume[curTrack->event.channel];
+            curTrack->data[1] = prevVolume[curTrack->channel];
         }
-        if (curTrack->event.data[1] == 0)
+        if (curTrack->data[1] == 0)
         {
             AddEvent(Event_NoteOff);
         }
@@ -684,19 +675,19 @@ static int GetMusEvent(int *time)
         break;
 
       case 0x20: // pitch wheel (adjusted to 14 bit value)
-        curTrack->event.data[0] = (*curTrack->pos & 0x1) << 6;
-        curTrack->event.data[1] = *curTrack->pos++ >> 1;
+        curTrack->data[0] = (*curTrack->pos & 0x1) << 6;
+        curTrack->data[1] = *curTrack->pos++ >> 1;
         AddEvent(Event_PitchWheel);
         break;
 
       case 0x30: // system event
-        curTrack->event.data[0] = controllerMap[*curTrack->pos++ & 0x0f];
+        curTrack->data[0] = controllerMap[*curTrack->pos++ & 0x0f];
         AddEvent(Event_Message);
         break;
 
       case 0x40: // change controller
-        curTrack->event.data[0] = controllerMap[*curTrack->pos++ & 0x0f];
-        curTrack->event.data[1] = *curTrack->pos++;
+        curTrack->data[0] = controllerMap[*curTrack->pos++ & 0x0f];
+        curTrack->data[1] = *curTrack->pos++;
         AddEvent(Event_Message);
         break;
 
@@ -718,7 +709,7 @@ static int GetMusEvent(int *time)
 
       case 0x70:
         // requires one data byte but is unused
-        curTrack->event.data[0] = *curTrack->pos++;
+        curTrack->data[0] = *curTrack->pos++;
         break;
     }
 
@@ -750,20 +741,20 @@ static void GetMidEvent()
         data = curTrack->running;
     }
 
-    curTrack->event.channel = data & 0x0f;
+    curTrack->channel = data & 0x0f;
 
     switch (data & 0xf0)
     {
       case 0x80:
-        curTrack->event.data[0] = *curTrack->pos++;
-        curTrack->event.data[1] = *curTrack->pos++;
+        curTrack->data[0] = *curTrack->pos++;
+        curTrack->data[1] = *curTrack->pos++;
         AddEvent(Event_NoteOff);
         break;
 
       case 0x90:
-        curTrack->event.data[0] = *curTrack->pos++;
-        curTrack->event.data[1] = *curTrack->pos++;
-        if (curTrack->event.data[1] == 0)
+        curTrack->data[0] = *curTrack->pos++;
+        curTrack->data[1] = *curTrack->pos++;
+        if (curTrack->data[1] == 0)
         {
             AddEvent(Event_NoteOff);
         }
@@ -774,32 +765,32 @@ static void GetMidEvent()
         break;
 
       case 0xa0:
-        curTrack->event.data[0] = *curTrack->pos++;
-        curTrack->event.data[1] = *curTrack->pos++;
+        curTrack->data[0] = *curTrack->pos++;
+        curTrack->data[1] = *curTrack->pos++;
         AddEvent(Event_Aftertouch);
         break;
 
       case 0xb0: // controller message
-        curTrack->event.data[0] = *curTrack->pos++;
-        curTrack->event.data[1] = *curTrack->pos++;
+        curTrack->data[0] = *curTrack->pos++;
+        curTrack->data[1] = *curTrack->pos++;
         AddEvent(Event_Message);
         break;
 
       case 0xc0:
-        // instrument number must be in 2nd byte of event.data
+        // instrument number must be in 2nd byte of data
         //  as that's where MUS puts it
-        curTrack->event.data[1] = *curTrack->pos++;
+        curTrack->data[1] = *curTrack->pos++;
         AddEvent(Event_ChangeInstrument);
         break;
 
       case 0xd0:
-        curTrack->event.data[0] = *curTrack->pos++;
+        curTrack->data[0] = *curTrack->pos++;
         AddEvent(Event_ChannelAftertouch);
         break;
 
       case 0xe0:
-        curTrack->event.data[0] = *curTrack->pos++;
-        curTrack->event.data[1] = *curTrack->pos++;
+        curTrack->data[0] = *curTrack->pos++;
+        curTrack->data[1] = *curTrack->pos++;
         AddEvent(Event_PitchWheel);
         break;
 
@@ -814,9 +805,9 @@ static void GetMidEvent()
             }
             else if (data == 0x51 && *curTrack->pos == 3)
             {
-                curTrack->event.data[0] = curTrack->pos[1];
-                curTrack->event.data[1] = curTrack->pos[2];
-                curTrack->event.data[2] = curTrack->pos[3];
+                curTrack->data[0] = curTrack->pos[1];
+                curTrack->data[1] = curTrack->pos[2];
+                curTrack->data[2] = curTrack->pos[3];
                 curTrack->DoEvent = SetTempo;
             }
         }
@@ -866,8 +857,6 @@ static void TrackMidEvents()
         {
             do
             {
-                eventData = &curTrack->event;
-
                 curTrack->DoEvent();
 
                 if (curTrack->done)
@@ -898,9 +887,8 @@ static void UpdateEvents()
 
 static void LoadMusTrack(BYTE *data)
 {
-    midTrack[0].data = data;
+    midTrack[0].track = data;
     curTrack = &midTrack[0];
-    eventData = &curTrack->event;
 
     numTracks = 1;
 
@@ -932,7 +920,7 @@ static int LoadMidTracks(int count, BYTE *data, int size)
             return 1;
         }
 
-        midTrack[track].data = data;
+        midTrack[track].track = data;
         data += length;
         size -= length;
     }

@@ -84,7 +84,7 @@ int main(int argc, char **argv)
     want.callback = SdlCallback;
 
     SDL_OpenAudio(&want, NULL);
-    SDL_PauseAudio(0);
+    SDL_PauseAudio(SDL_TRUE);
 
     Midiplay_Init(SAMPLERATE);
 
@@ -174,7 +174,7 @@ int main(int argc, char **argv)
 #else
             printf("[  ] [    ]\r");
 #endif
-            Midiplay_Play(playing);
+            Midiplay_Play(1);
 
             while (Midiplay_IsPlaying())
             {
@@ -189,7 +189,7 @@ int main(int argc, char **argv)
                 else if (key == 'p')
                 {
                     playing = 1 - playing;
-                    Midiplay_Play(playing);
+                    SDL_PauseAudio(playing ? SDL_FALSE : SDL_TRUE);
                 }
                 else if (key == 'n')
                 {
@@ -228,6 +228,8 @@ int main(int argc, char **argv)
         {
             INVALID_FILE;
         }
+
+        Midiplay_Play(0);
 
         free(buffer);
     }

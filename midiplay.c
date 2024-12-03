@@ -323,10 +323,9 @@ static void Event_MuteNotes()
 static void Event_PitchWheel()
 {
     CHANNEL *channel = &midChannel[curTrack->channel];
-    int     bend = ((curTrack->data[0] & 0x7f) | (curTrack->data[1] << 7));
     VOICE   *voice = channel->voice.next;
 
-    channel->bend = (bend >> 7) - 64; // 7 bit values
+    channel->bend = curTrack->data[1] - 64; // coarse value
 
     while (voice != &channel->voice)
     {
@@ -674,8 +673,8 @@ static int GetMusEvent(int *time)
         }
         break;
 
-      case 0x20: // pitch wheel (adjusted to 14 bit value)
-        curTrack->data[0] = (*curTrack->pos & 0x1) << 6;
+      case 0x20: // pitch wheel (adjusted to 7 bit value)
+        curTrack->data[0] = 0;
         curTrack->data[1] = *curTrack->pos++ >> 1;
         AddEvent(Event_PitchWheel);
         break;

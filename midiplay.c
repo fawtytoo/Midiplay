@@ -1,8 +1,22 @@
-// midiplay
+//  Copyright 2021-2024 by Steve Clark
 
-// Copyright 2022 by Steve Clark
+//  This software is provided 'as-is', without any express or implied
+//  warranty.  In no event will the authors be held liable for any damages
+//  arising from the use of this software.
 
-#include "synth.h"
+//  Permission is granted to anyone to use this software for any purpose,
+//  including commercial applications, and to alter it and redistribute it
+//  freely, subject to the following restrictions:
+
+//  1. The origin of this software must not be misrepresented; you must not
+//     claim that you wrote the original software. If you use this software
+//     in a product, an acknowledgment in the product documentation would be
+//     appreciated but is not required. 
+//  2. Altered source versions must be plainly marked as such, and must not be
+//     misrepresented as being the original software.
+//  3. This notice may not be removed or altered from any source distribution.
+
+#include "opl.h"
 
 #include "midiplay.h"
 
@@ -12,62 +26,7 @@
 #define BE16(i)     (((i)[0] << 8) | (i)[1])
 #define BE32(i)     ((BE16(i) << 16) | BE16(i + 2))
 
-// timer -----------------------------------------------------------------------
-typedef struct
-{
-    int rate;
-    int acc;
-    int remainder;
-    int divisor;
-}
-TIMER;
-
-static TIMER    timerPhase, timerSecond, timerBeat;
-
-// event -----------------------------------------------------------------------
-#define NOTE_OFF        0
-#define NOTE_PLAY       1
-
-#define CC_01           1   // mod wheel
-#define CC_06           6   // data entry coarse
-#define CC_07           7   // volume
-#define CC_0a           10  // pan
-#define CC_0b           11  // expression
-#define CC_40           64  // sustain
-#define CC_64           100 // reg lsb
-#define CC_65           101 // reg msb
-#define CC_78           120 // all sounds off
-#define CC_79           121 // reset controllers
-#define CC_7b           123 // all notes off
-#define CC_80           128 // MUS instrument change
-#define CC_ff           255
-
-typedef struct _voice   VOICE;
-struct _voice
-{
-    VOICE   *prev, *next;
-
-    int     index;
-    int     note;
-    int     volume;
-    int     playing;
-};
-
-typedef struct
-{
-    VOICE   voice;
-    int     instrument;
-    int     volume;
-    int     pan;
-    int     sustain;
-    int     bend;
-    int     bendRange;
-    int     expression;
-    int     rpn;
-}
-CHANNEL;
-
-static UINT     volumeTable[128] =
+const u32       volumeTable[128] =
 {
     0x000, 0x001, 0x002, 0x004, 0x005, 0x007, 0x008, 0x009, 0x00b, 0x00c, 0x00e, 0x00f, 0x011, 0x012, 0x014, 0x015,
     0x017, 0x018, 0x01a, 0x01b, 0x01d, 0x01f, 0x020, 0x022, 0x023, 0x025, 0x027, 0x028, 0x02a, 0x02b, 0x02d, 0x02f,
@@ -79,74 +38,157 @@ static UINT     volumeTable[128] =
     0x0d7, 0x0da, 0x0dc, 0x0df, 0x0e2, 0x0e4, 0x0e7, 0x0ea, 0x0ec, 0x0ef, 0x0f2, 0x0f4, 0x0f7, 0x0fa, 0x0fd, 0x100
 };
 
+// genmidi ---------------------------------------------------------------------
+#define GM_FLAG_FIXED           0x0001
+#define GM_FLAG_2VOICE          0x0004
+
+typedef struct
+{
+    u8      mod[6];
+    u8      feedback;
+    u8      car[6];
+    u8      unused;
+    s16     baseNoteOffset;
+}
+GMVOICE;
+
+typedef struct
+{
+    u16     flags;
+    s8      fineTuning;
+    u8      fixedNote;
+    GMVOICE voice[2];
+}
+GENMIDI;
+
+static GENMIDI      *gmInstr;
+
+// timer -----------------------------------------------------------------------
+typedef struct
+{
+    int     rate;
+    int     acc;
+    int     remainder;
+    int     divisor;
+}
+TIMER;
+
+static TIMER    timerPhase, timerSecond, timerBeat;
+
+// event -----------------------------------------------------------------------
+#define NOTE_OFF        0
+#define NOTE_PLAY       1
+
+#define CC_01   1   // mod wheel
+#define CC_06   6   // data entry coarse
+#define CC_07   7   // volume
+#define CC_0a   10  // pan
+#define CC_0b   11  // expression
+#define CC_40   64  // sustain
+#define CC_64   100 // reg lsb
+#define CC_65   101 // reg msb
+#define CC_78   120 // all sounds off
+#define CC_79   121 // reset controllers
+#define CC_7b   123 // all notes off
+#define CC_80   128 // MUS instrument change
+#define CC_FF   255
+
+typedef struct _voice   VOICE;
+struct _voice
+{
+    VOICE   *prev, *next;
+    int     index, count;
+    int     note, pitch;
+    int     volume;
+    int     playing;
+};
+
+typedef struct
+{
+    VOICE   voice;
+    GENMIDI *instrument;
+    int     voiceCount;
+    int     tuning[2];
+    int     volume, expression;
+    int     prevVolume; // MUS only
+    int     pan;
+    int     bend, bendRange;
+    int     sustain;
+    int     rpn;
+}
+CHANNEL;
+
 static CHANNEL  midChannel[16] =
 {
-    {.voice = {.prev = &midChannel[0].voice, .next = &midChannel[0].voice}},
-    {.voice = {.prev = &midChannel[1].voice, .next = &midChannel[1].voice}},
-    {.voice = {.prev = &midChannel[2].voice, .next = &midChannel[2].voice}},
-    {.voice = {.prev = &midChannel[3].voice, .next = &midChannel[3].voice}},
-    {.voice = {.prev = &midChannel[4].voice, .next = &midChannel[4].voice}},
-    {.voice = {.prev = &midChannel[5].voice, .next = &midChannel[5].voice}},
-    {.voice = {.prev = &midChannel[6].voice, .next = &midChannel[6].voice}},
-    {.voice = {.prev = &midChannel[7].voice, .next = &midChannel[7].voice}},
-    {.voice = {.prev = &midChannel[8].voice, .next = &midChannel[8].voice}},
-    {.voice = {.prev = &midChannel[9].voice, .next = &midChannel[9].voice}},
-    {.voice = {.prev = &midChannel[10].voice, .next = &midChannel[10].voice}},
-    {.voice = {.prev = &midChannel[11].voice, .next = &midChannel[11].voice}},
-    {.voice = {.prev = &midChannel[12].voice, .next = &midChannel[12].voice}},
-    {.voice = {.prev = &midChannel[13].voice, .next = &midChannel[13].voice}},
-    {.voice = {.prev = &midChannel[14].voice, .next = &midChannel[14].voice}},
-    {.voice = {.prev = &midChannel[15].voice, .next = &midChannel[15].voice}}
+    {.voice = {.prev = &midChannel[0].voice, .next = &midChannel[0].voice, .volume = 257}, .tuning[0] = 0},
+    {.voice = {.prev = &midChannel[1].voice, .next = &midChannel[1].voice, .volume = 257}, .tuning[0] = 0},
+    {.voice = {.prev = &midChannel[2].voice, .next = &midChannel[2].voice, .volume = 257}, .tuning[0] = 0},
+    {.voice = {.prev = &midChannel[3].voice, .next = &midChannel[3].voice, .volume = 257}, .tuning[0] = 0},
+    {.voice = {.prev = &midChannel[4].voice, .next = &midChannel[4].voice, .volume = 257}, .tuning[0] = 0},
+    {.voice = {.prev = &midChannel[5].voice, .next = &midChannel[5].voice, .volume = 257}, .tuning[0] = 0},
+    {.voice = {.prev = &midChannel[6].voice, .next = &midChannel[6].voice, .volume = 257}, .tuning[0] = 0},
+    {.voice = {.prev = &midChannel[7].voice, .next = &midChannel[7].voice, .volume = 257}, .tuning[0] = 0},
+    {.voice = {.prev = &midChannel[8].voice, .next = &midChannel[8].voice, .volume = 257}, .tuning[0] = 0},
+    {.voice = {.prev = &midChannel[9].voice, .next = &midChannel[9].voice, .volume = 257}, .tuning[0] = 0},
+    {.voice = {.prev = &midChannel[10].voice, .next = &midChannel[10].voice, .volume = 257}, .tuning[0] = 0},
+    {.voice = {.prev = &midChannel[11].voice, .next = &midChannel[11].voice, .volume = 257}, .tuning[0] = 0},
+    {.voice = {.prev = &midChannel[12].voice, .next = &midChannel[12].voice, .volume = 257}, .tuning[0] = 0},
+    {.voice = {.prev = &midChannel[13].voice, .next = &midChannel[13].voice, .volume = 257}, .tuning[0] = 0},
+    {.voice = {.prev = &midChannel[14].voice, .next = &midChannel[14].voice, .volume = 257}, .tuning[0] = 0},
+    {.voice = {.prev = &midChannel[15].voice, .next = &midChannel[15].voice, .volume = 257}, .tuning[0] = 0}
 };
-static VOICE    midVoice[VOICES], unusedVoice;
+static VOICE    midVoice[NVOICES];
+static VOICE    voiceList = {.prev = &voiceList, .next = &voiceList};
+
+static int      percChannel = 9;
+static int      voiceCount = 0;
 
 // control ---------------------------------------------------------------------
 #define MICROSEC    1000000
 
 typedef void (*DOEVENT)(void);
+static void (*AddEvent)(DOEVENT);
 
 typedef struct
 {
-    BYTE    *track, *pos;
-    int     clock; // accumulator
-    BYTE    running;
+    u8      *track, *pos;
+    u32     clock;
     DOEVENT DoEvent;
-    BYTE    channel;
-    BYTE    data[3];
+    int     channel;
+    u8      data[3];
+    u8      running;
     int     done;
 }
 TRACK;
 
-static TRACK    midTrack[65536], *curTrack, *endTrack;
-static int      numTracks, numTracksEnded;
+static TRACK        midTrack[65536], *curTrack, *endTrack;
+static int          numTracks, numTracksEnded;
 
-static BYTE     prevVolume[16]; // last known note volume on channel
+static int          beatTicks = 96, beatTempo = 500000;
+static int          playSamples;
+static u32          musicClock;
 
-static int      beatTicks = 96, beatTempo = 500000;
-static int      playSamples;
-static int      musicClock;
 #ifdef MP_TIME
-static int      timeTicks, timeTempo;
+static int          timeTicks, timeTempo;
 #endif
-static DOEVENT  MusicEvents;
+
+static DOEVENT      MusicEvents;
 
 // controller map for MUS
-static int      controllerMap[16] = // CMD_TYPE would suggest only 16
+static const int    controllerMap[16] = // CMD_TYPE would suggest only 16
 {
-    CC_80, CC_ff, CC_01, CC_07, CC_0a, CC_0b, CC_ff, CC_ff,
-    CC_40, CC_ff, CC_78, CC_7b, CC_ff, CC_ff, CC_79, CC_ff
+    CC_80, CC_FF, CC_01, CC_07, CC_0a, CC_0b, CC_FF, CC_FF,
+    CC_40, CC_FF, CC_78, CC_7b, CC_FF, CC_FF, CC_79, CC_FF
 };
-
-static void (*AddEvent)(DOEVENT);
 
 // midiplay --------------------------------------------------------------------
 #define MUS_HDRSIZE     16
 #define MID_HDRSIZE     14
 
-static int  musicInit = 0;
-static int  musicLooping;
-static int  musicPlaying = 0;
-static int  musicVolume = 0x100;
+static int      musicInit = 0;
+static int      musicLooping;
+static int      musicPlaying = 0;
+static int      musicVolume = 0x100;
 
 // timer -----------------------------------------------------------------------
 static int Timer_Update(TIMER *timer)
@@ -175,38 +217,39 @@ static void ResetChannel(int channel)
 {
     midChannel[channel].sustain = 0;
     midChannel[channel].bend = 0;
-    midChannel[channel].expression = volumeTable[127];
+    midChannel[channel].expression = 127;
     midChannel[channel].rpn = (127 << 7) | 127;
+}
+
+static void Voice_AddToUnused(VOICE *voice)
+{
+    voice->next = &voiceList;
+    voice->prev = voiceList.prev;
+    voiceList.prev = voice;
+    voice->prev->next = voice;
 }
 
 static void Voice_Off(VOICE *voice)
 {
-    Synth_KeyOff(voice->index);
+    OPL_VoiceOff(voice->index);
 
     voice->prev->next = voice->next;
     voice->next->prev = voice->prev;
 
-    voice->next = &unusedVoice;
-    voice->prev = unusedVoice.prev;
-    unusedVoice.prev = voice;
-    voice->prev->next = voice;
+    Voice_AddToUnused(voice);
+
+    voiceCount--;
 }
 
 static void VoiceVolume(CHANNEL *channel, VOICE *voice)
 {
-    Synth_SetVolume(voice->index, channel->volume * channel->expression * voice->volume >> 16);
+    u32     volume;
+
+    volume = volumeTable[channel->volume] * volumeTable[channel->expression] * volumeTable[voice->volume];
+    OPL_Volume(voice->index, volume >> 16);
 }
 
-static void AllSoundOff(CHANNEL *channel)
-{
-    while (channel->voice.next != &channel->voice)
-    {
-        Synth_SetVolume(channel->voice.next->index, 0x00);
-        Voice_Off(channel->voice.next);
-    }
-}
-
-static void ResetControllers()
+static void Event_ResetControllers()
 {
     ResetChannel(curTrack->channel);
 }
@@ -236,68 +279,141 @@ static void Event_NoteOff()
     }
 }
 
-static void FrequencyStep(VOICE *voice, CHANNEL *channel)
+static void Voice_Frequency(VOICE *voice, CHANNEL *channel)
 {
-    int index, octave;
+    OPL_Frequency(voice->index, voice->pitch + channel->bend * channel->bendRange);
+}
 
-    index = voice->note * 32 + channel->bend * channel->bendRange / 2;
-    if (index < 0)
+static void KillQuietest(VOICE *voice)
+{
+    CHANNEL *channel = &midChannel[0];
+    int     i;
+
+    for (i = 0; i < 16; i++, channel++)
     {
-        index = 0;
+        if (channel->voice.prev != &channel->voice)
+        {
+            // pick the quietest of the oldest voices
+            if (channel->voice.prev->volume < voice->volume)
+            {
+                voice = channel->voice.prev;
+            }
+        }
     }
-    else if (index > 128 * 32 - 1)
+
+    Voice_Off(voice);
+}
+
+static void SetupInstrument(CHANNEL *channel, int instrument)
+{
+    channel->instrument = &gmInstr[instrument];
+    channel->voiceCount = 1;
+    channel->tuning[1] = 0;
+    if (channel->instrument->flags & GM_FLAG_2VOICE)
     {
-        index = 128 * 32 - 1;
+        channel->voiceCount = 2;
+        channel->tuning[1] = (u8)channel->instrument->fineTuning - 128;
     }
-
-    octave = index / 384;
-    index %= 384;
-
-    Synth_SetFrequency(voice->index, index, octave);
 }
 
 static void Event_NoteOn()
 {
     CHANNEL *channel = &midChannel[curTrack->channel];
-    int     note = curTrack->data[0];
+    int     note = curTrack->data[0], key = note;
     int     volume = curTrack->data[1];
+    GMVOICE *gmVoice;
+
     VOICE   *voice;
+    int     count = 0;
+
+    if (volume == 0)
+    {
+        Event_NoteOff();
+        return;
+    }
+
+    if (curTrack->channel == percChannel)
+    {
+        if (note < 35 || note > 81)
+        {
+            return;
+        }
+
+        SetupInstrument(channel, 128 + note - 35);
+    }
 
     voice = channel->voice.next;
-    while (voice != &channel->voice)
+    while (voice != &channel->voice && count < channel->voiceCount)
     {
         if (voice->note == note)
         {
-            voice->volume = volumeTable[volume];
-            VoiceVolume(channel, voice);
             voice->playing = NOTE_PLAY;
+            voice->volume = volume;
+            VoiceVolume(channel, voice);
+            OPL_VoiceOn(voice->index); // restart note
+            count++;
         }
         voice = voice->next;
     }
 
-    if (unusedVoice.next == &unusedVoice)
+    while (NVOICES - voiceCount < channel->voiceCount - count)
     {
-        return;
+        KillQuietest(&channel->voice);
     }
 
-    voice = unusedVoice.next;
-    unusedVoice.next = voice->next;
-    voice->next->prev = &unusedVoice;
-    voice->next = channel->voice.next;
-    voice->next->prev = voice;
-    channel->voice.next = voice;
-    voice->prev = &channel->voice;
+    for ( ; voiceList.next != &voiceList && count < channel->voiceCount; count++)
+    {
+        voice = voiceList.next;
+        voiceList.next = voice->next;
+        voice->next->prev = &voiceList;
+        voice->next = channel->voice.next;
+        voice->next->prev = voice;
+        channel->voice.next = voice;
+        voice->prev = &channel->voice;
 
-    voice->note = note;
-    voice->volume = volumeTable[volume];
-    VoiceVolume(channel, voice);
-    Synth_SetPan(voice->index, channel->pan);
-    FrequencyStep(voice, channel);
-    Synth_KeyOn(voice->index);
-    voice->playing = NOTE_PLAY;
+        // original note value or percussion instrument
+        voice->note = note;
+
+        voice->count = count;
+        gmVoice = &channel->instrument->voice[count];
+
+        OPL_Op(voice->index, 0, gmVoice->mod);
+        OPL_Op(voice->index, 1, gmVoice->car);
+
+        OPL_Feedback(voice->index, gmVoice->feedback);
+        OPL_Pan(voice->index, channel->pan);
+
+        voice->volume = volume;
+        VoiceVolume(channel, voice);
+
+        if (channel->instrument->flags & GM_FLAG_FIXED)
+        {
+            key = channel->instrument->fixedNote;
+        }
+        else if (curTrack->channel != percChannel)
+        {
+            key = note + gmVoice->baseNoteOffset;
+        }
+        voice->pitch = key * 64 + channel->tuning[count];
+        Voice_Frequency(voice, channel);
+
+        OPL_VoiceOn(voice->index);
+
+        voice->playing = NOTE_PLAY;
+        voiceCount++;
+    }
 }
 
-static void Event_MuteNotes()
+static void Event_AllSoundOff(CHANNEL *channel)
+{
+    while (channel->voice.next != &channel->voice)
+    {
+        OPL_Volume(channel->voice.next->index, 0x00);
+        Voice_Off(channel->voice.next);
+    }
+}
+
+static void Event_AllNotesOff()
 {
     CHANNEL *channel = &midChannel[curTrack->channel];
     VOICE   *voice;
@@ -329,7 +445,7 @@ static void Event_PitchWheel()
 
     while (voice != &channel->voice)
     {
-        FrequencyStep(voice, channel);
+        Voice_Frequency(voice, channel);
         voice = voice->next;
     }
 }
@@ -345,7 +461,7 @@ static void Event_Aftertouch()
     {
         if (voice->note == note)
         {
-            voice->volume = volumeTable[volume];
+            voice->volume = volume;
             VoiceVolume(channel, voice);
         }
         voice = voice->next;
@@ -355,17 +471,15 @@ static void Event_Aftertouch()
 static void Event_Sustain()
 {
     CHANNEL *channel = &midChannel[curTrack->channel];
-    int     sustain = curTrack->data[1];
-    VOICE   *voice;
+    VOICE   *voice = channel->voice.next;
 
-    channel->sustain = sustain < 64 ? 0 : 1;
+    channel->sustain = curTrack->data[1] < 64 ? 0 : 1;
 
     if (channel->sustain)
     {
         return;
     }
 
-    voice = channel->voice.next;
     while (voice != &channel->voice)
     {
         if (voice->playing == NOTE_OFF)
@@ -381,10 +495,9 @@ static void Event_Sustain()
 static void Event_ChannelVolume()
 {
     CHANNEL *channel = &midChannel[curTrack->channel];
-    int     volume = curTrack->data[1];
     VOICE   *voice = channel->voice.next;
 
-    channel->volume = volumeTable[volume & 0x7f];
+    channel->volume = curTrack->data[1];
 
     while (voice != &channel->voice)
     {
@@ -396,14 +509,13 @@ static void Event_ChannelVolume()
 static void Event_Pan()
 {
     CHANNEL *channel = &midChannel[curTrack->channel];
-    int     pan = curTrack->data[1] & 0x7f;
     VOICE   *voice = channel->voice.next;
 
-    channel->pan = pan;
+    channel->pan = curTrack->data[1];
 
     while (voice != &channel->voice)
     {
-        Synth_SetPan(voice->index, pan);
+        OPL_Pan(voice->index, channel->pan);
         voice = voice->next;
     }
 }
@@ -416,7 +528,7 @@ static void Event_ChannelAftertouch()
 
     while (voice != &channel->voice)
     {
-        voice->volume = volumeTable[volume];
+        voice->volume = volume;
         VoiceVolume(channel, voice);
         voice = voice->next;
     }
@@ -425,10 +537,9 @@ static void Event_ChannelAftertouch()
 static void Event_Expression()
 {
     CHANNEL *channel = &midChannel[curTrack->channel];
-    int     expression = curTrack->data[1] & 0x7f;
     VOICE   *voice = channel->voice.next;
 
-    channel->expression = volumeTable[expression];
+    channel->expression = curTrack->data[1];
 
     while (voice != &channel->voice)
     {
@@ -441,10 +552,10 @@ static void Event_ChangeInstrument()
 {
     CHANNEL *channel = &midChannel[curTrack->channel];
 
-    channel->instrument = curTrack->data[1];
+    SetupInstrument(channel, curTrack->data[1]);
 }
 
-static void DataEntry_Coarse()
+static void Event_DataEntryCoarse()
 {
     CHANNEL *channel = &midChannel[curTrack->channel];
 
@@ -462,7 +573,7 @@ static void Event_Message()
         break;
 
       case CC_06:
-        DataEntry_Coarse();
+        Event_DataEntryCoarse();
         break;
 
       case CC_07:
@@ -477,8 +588,8 @@ static void Event_Message()
         Event_Expression();
         break;
 
-      case CC_40: // FIXME
-        //Event_Sustain();
+      case CC_40:
+        Event_Sustain();
         break;
 
       case CC_64:
@@ -492,22 +603,22 @@ static void Event_Message()
         break;
 
       case CC_78:
-        AllSoundOff(&midChannel[curTrack->channel]);
+        Event_AllSoundOff(&midChannel[curTrack->channel]);
         break;
 
       case CC_79:
-        ResetControllers();
+        Event_ResetControllers();
         break;
 
       case CC_7b:
-        Event_MuteNotes();
+        Event_AllNotesOff();
         break;
 
       case CC_80:
         Event_ChangeInstrument();
         break;
 
-      default: // event not handled
+      default:
         break;
     }
 }
@@ -521,32 +632,32 @@ static void UpdateScoreTime()
     timeTempo %= MICROSEC;
 }
 #endif
-// sometimes, you just want nothing to happen
+
 static void DoNothing()
 {
 }
 
 static void InitTracks()
 {
-    int track, channel;
+    int     i;
 
-    for (track = 0; track < numTracks; track++)
+    for (i = 0; i < numTracks; i++)
     {
-        midTrack[track].pos = midTrack[track].track;
-        midTrack[track].done = 0;
-        midTrack[track].clock = 0;
-        midTrack[track].DoEvent = DoNothing;
+        midTrack[i].pos = midTrack[i].track;
+        midTrack[i].done = 0;
+        midTrack[i].clock = 0;
+        midTrack[i].DoEvent = DoNothing;
     }
 
-    for (channel = 0; channel < 16; channel++)
+    for (i = 0; i < 16; i++)
     {
-        AllSoundOff(&midChannel[channel]);
-        ResetChannel(channel);
-        midChannel[channel].instrument = 0;
-        midChannel[channel].volume = volumeTable[100];
-        midChannel[channel].pan = 64;
-        midChannel[channel].bendRange = 2;
-        prevVolume[channel] = 0;
+        Event_AllSoundOff(&midChannel[i]);
+        ResetChannel(i);
+        SetupInstrument(&midChannel[i], 0);
+        midChannel[i].volume = 100;
+        midChannel[i].pan = 64;
+        midChannel[i].bendRange = 2;
+        midChannel[i].prevVolume = 0;
     }
 
     musicClock = 0;
@@ -556,9 +667,12 @@ static void InitTracks()
     Timer_Set(&timerBeat, beatTempo, beatTicks);
 
     numTracksEnded = 0;
+
 #ifdef MP_TIME
     timeTicks = timeTempo = 0;
 #endif
+
+    Timer_Set(&timerPhase, 49716, timerPhase.divisor);
 }
 
 static void SetTempo()
@@ -592,12 +706,13 @@ static void EndOfMidiTrack()
     InitTracks();
     // at this point we need to parse a new event from track 0
     curTrack = &midTrack[0];
+    // curTrack->event does not need to be set
 }
 
-static UINT GetLength()
+static u32 GetLength()
 {
-    UINT    length;
-    BYTE    data;
+    u32     length;
+    u8      data;
 
     // unrolled
     data = *curTrack->pos++;
@@ -620,20 +735,23 @@ static UINT GetLength()
 
     return length;
 }
+
 #ifdef MP_TIME
+// prevents unecessary events during inital score timing
 static void NoEvent(DOEVENT event)
 {
     (void)event;
 }
 #endif
+
 static void NewEvent(DOEVENT event)
 {
     curTrack->DoEvent = event;
 }
 
-static int GetMusEvent(int *time)
+static int GetMusEvent(u32 *time)
 {
-    BYTE    data, last;
+    u8      data, last;
 
     curTrack->DoEvent = DoNothing;
 
@@ -646,34 +764,27 @@ static int GetMusEvent(int *time)
     switch (data & 0x70)
     {
       case 0x00: // release note
-        curTrack->data[0] = (*curTrack->pos++ & 0x7f);
+        curTrack->data[0] = *curTrack->pos++ & 0x7f;
         AddEvent(Event_NoteOff);
         break;
 
       case 0x10: // play note
         data = *curTrack->pos++;
-        curTrack->data[0] = (data & 0x7f);
+        curTrack->data[0] = data & 0x7f;
         if (data & 0x80)
         {
             curTrack->data[1] = *curTrack->pos++ & 0x7f;
             // should the volume be saved if the value is 0?
-            prevVolume[curTrack->channel] = curTrack->data[1];
+            midChannel[curTrack->channel].prevVolume = curTrack->data[1];
         }
         else
         {
-            curTrack->data[1] = prevVolume[curTrack->channel];
+            curTrack->data[1] = midChannel[curTrack->channel].prevVolume;
         }
-        if (curTrack->data[1] == 0)
-        {
-            AddEvent(Event_NoteOff);
-        }
-        else
-        {
-            AddEvent(Event_NoteOn);
-        }
+        AddEvent(Event_NoteOn);
         break;
 
-      case 0x20: // pitch wheel (adjusted to 7 bit value)
+      case 0x20: // pitch wheel adjusted to 7 bit
         curTrack->data[0] = 0;
         curTrack->data[1] = *curTrack->pos++ >> 1;
         AddEvent(Event_PitchWheel);
@@ -686,7 +797,7 @@ static int GetMusEvent(int *time)
 
       case 0x40: // change controller
         curTrack->data[0] = controllerMap[*curTrack->pos++ & 0x0f];
-        curTrack->data[1] = *curTrack->pos++;
+        curTrack->data[1] = *curTrack->pos++ & 0x7f;
         AddEvent(Event_Message);
         break;
 
@@ -694,7 +805,7 @@ static int GetMusEvent(int *time)
         break;
 
       case 0x60: // score end
-        last = 1;
+        last = 1; // assume last
         if (musicLooping && musicInit == 2)
         {
             AddEvent(InitTracks);
@@ -724,8 +835,8 @@ static int GetMusEvent(int *time)
 
 static void GetMidEvent()
 {
-    BYTE    data, event = 0x0;
-    UINT    length;
+    u8      data, event = 0x0;
+    u32     length;
 
     curTrack->DoEvent = DoNothing;
 
@@ -745,51 +856,44 @@ static void GetMidEvent()
     switch (data & 0xf0)
     {
       case 0x80:
-        curTrack->data[0] = *curTrack->pos++;
-        curTrack->data[1] = *curTrack->pos++;
+        curTrack->data[0] = *curTrack->pos++ & 0x7f;
+        curTrack->data[1] = *curTrack->pos++ & 0x7f;
         AddEvent(Event_NoteOff);
         break;
 
       case 0x90:
-        curTrack->data[0] = *curTrack->pos++;
-        curTrack->data[1] = *curTrack->pos++;
-        if (curTrack->data[1] == 0)
-        {
-            AddEvent(Event_NoteOff);
-        }
-        else
-        {
-            AddEvent(Event_NoteOn);
-        }
+        curTrack->data[0] = *curTrack->pos++ & 0x7f;
+        curTrack->data[1] = *curTrack->pos++ & 0x7f;
+        AddEvent(Event_NoteOn);
         break;
 
       case 0xa0:
-        curTrack->data[0] = *curTrack->pos++;
-        curTrack->data[1] = *curTrack->pos++;
+        curTrack->data[0] = *curTrack->pos++ & 0x7f;
+        curTrack->data[1] = *curTrack->pos++ & 0x7f;
         AddEvent(Event_Aftertouch);
         break;
 
       case 0xb0: // controller message
-        curTrack->data[0] = *curTrack->pos++;
-        curTrack->data[1] = *curTrack->pos++;
+        curTrack->data[0] = *curTrack->pos++ & 0x7f;
+        curTrack->data[1] = *curTrack->pos++ & 0x7f;
         AddEvent(Event_Message);
         break;
 
       case 0xc0:
-        // instrument number must be in 2nd byte of data
+        // instrument number must be in 2nd byte of event.data
         //  as that's where MUS puts it
-        curTrack->data[1] = *curTrack->pos++;
+        curTrack->data[1] = *curTrack->pos++ & 0x7f;
         AddEvent(Event_ChangeInstrument);
         break;
 
       case 0xd0:
-        curTrack->data[0] = *curTrack->pos++;
+        curTrack->data[0] = *curTrack->pos++ & 0x7f;
         AddEvent(Event_ChannelAftertouch);
         break;
 
-      case 0xe0:
-        curTrack->data[0] = *curTrack->pos++;
-        curTrack->data[1] = *curTrack->pos++;
+      case 0xe0: // pitch wheel
+        curTrack->data[0] = *curTrack->pos++ & 0x7f; // fine
+        curTrack->data[1] = *curTrack->pos++ & 0x7f; // coarse
         AddEvent(Event_PitchWheel);
         break;
 
@@ -824,7 +928,7 @@ static void GetMidEvent()
 
 static void TrackMusEvents()
 {
-    int ticks;
+    u32     ticks;
 
     if (curTrack->done)
     {
@@ -846,7 +950,7 @@ static void TrackMusEvents()
 
 static void TrackMidEvents()
 {
-    int ticks;
+    u32     ticks;
 
     curTrack = &midTrack[0];
 
@@ -880,11 +984,12 @@ static void UpdateEvents()
 #ifdef MP_TIME
     UpdateScoreTime();
 #endif
+
     MusicEvents();
     musicClock++;
 }
 
-static void LoadMusTrack(BYTE *data)
+static void LoadMusTrack(u8 *data)
 {
     midTrack[0].track = data;
     curTrack = &midTrack[0];
@@ -892,11 +997,13 @@ static void LoadMusTrack(BYTE *data)
     numTracks = 1;
 
     MusicEvents = TrackMusEvents;
+    percChannel = 15;
 }
 
-static int LoadMidTracks(int count, BYTE *data, int size)
+static int LoadMidTracks(int count, u8 *data, int size)
 {
-    int track, length;
+    int     track;
+    u32     length;
 
     for (track = 0; track < count; track++)
     {
@@ -928,29 +1035,42 @@ static int LoadMidTracks(int count, BYTE *data, int size)
     endTrack = &midTrack[numTracks - 1];
 
     MusicEvents = TrackMidEvents;
+    percChannel = 9;
 
     return 0;
 }
 
 // midiplay --------------------------------------------------------------------
-void Midiplay_Init(int samplerate)
+int Midiplay_Init(int samplerate, char *genmidi)
 {
     VOICE   *voice;
-    int     index;
+    int     i;
 
-    Timer_Set(&timerPhase, 65536, samplerate);
+    if (!ID(genmidi, "#OPL"))
+    {
+        return 1;
+    }
+
+    if (!ID((genmidi + 4), "_II#"))
+    {
+        return 1;
+    }
+
+    gmInstr = (GENMIDI *)(genmidi + 8);
+
+    // 0 = off, 1 = on
+    OPL_TremoloDepth(1);
+    OPL_VibratoDepth(1);
+    OPL_Reset();
+
+    Timer_Set(&timerPhase, 49716, samplerate);
     Timer_Set(&timerSecond, MICROSEC, samplerate);
 
-    unusedVoice.next = &unusedVoice;
-    unusedVoice.prev = &unusedVoice;
     voice = &midVoice[0];
-    for (index = 0; index < VOICES; index++, voice++)
+    for (i = 0; i < NVOICES; i++, voice++)
     {
-        voice->index = index;
-        voice->next = &unusedVoice;
-        voice->prev = unusedVoice.prev;
-        unusedVoice.prev = voice;
-        voice->prev->next = voice;
+        voice->index = i;
+        Voice_AddToUnused(voice);
     }
 
 #ifndef MP_TIME
@@ -958,15 +1078,17 @@ void Midiplay_Init(int samplerate)
 #endif
 
     musicInit = 1;
+
+    return 0;
 }
 
 int Midiplay_Load(void *data, int size)
 {
-    BYTE    *byte = (BYTE *)data;
+    u8      *byte = (u8 *)data;
 
     if (musicInit == 0)
     {
-        return 0;
+        return 1;
     }
 
     musicInit = 1;
@@ -974,19 +1096,19 @@ int Midiplay_Load(void *data, int size)
 
     if (size < 4)
     {
-        return 0;
+        return 1;
     }
 
     if (ID(byte, "MUS" "\x1a"))
     {
         if (size < MUS_HDRSIZE)
         {
-            return 0;
+            return 1;
         }
 
         if (size < LE16(byte + 6) + LE16(byte + 4))
         {
-            return 0;
+            return 1;
         }
 
         beatTicks = LE16(byte + 14);
@@ -1001,24 +1123,24 @@ int Midiplay_Load(void *data, int size)
     {
         if (size < MID_HDRSIZE)
         {
-            return 0;
+            return 1;
         }
 
         beatTicks = BE16(byte + 12);
         if (beatTicks < 0)
         {
-            return 0; // no support for SMPTE format
+            return 2; // no support for SMPTE format
         }
 
         size -= MID_HDRSIZE;
         if (LoadMidTracks(BE16(byte + 10), byte + MID_HDRSIZE, size) == 1)
         {
-            return 0; // track header failed
+            return 1; // track header failed
         }
     }
     else
     {
-        return 0;
+        return 1;
     }
 
     InitTracks();
@@ -1031,14 +1153,14 @@ int Midiplay_Load(void *data, int size)
     }
     AddEvent = NewEvent;
 #endif
+
     musicInit = 2;
 
-    return 1;
+    return 0;
 }
 
 void Midiplay_Play(int playing)
 {
-    // if there's nothing to play, don't force it
     if (musicInit < 2)
     {
         return;
@@ -1049,7 +1171,7 @@ void Midiplay_Play(int playing)
         InitTracks();
     }
 
-    musicPlaying = playing;
+    musicPlaying = playing ? 2 : 0;
 }
 
 void Midiplay_SetVolume(int volume)
@@ -1081,35 +1203,31 @@ int Midiplay_IsPlaying()
     return 0;
 }
 
-void Midiplay_Output(short *output, int length)
+void Midiplay_Output(short output[2])
 {
     short   buffer[2];
+    int     rate;
 
-    while (length)
+    if (musicPlaying == 2)
     {
-        if (musicPlaying)
+        playSamples -= Timer_Update(&timerSecond);
+        if (playSamples < 0)
         {
-            playSamples -= Timer_Update(&timerSecond);
-            if (playSamples < 0)
-            {
-                UpdateEvents();
-                playSamples += Timer_Update(&timerBeat);
-            }
-
-            Synth_Generate(buffer, Timer_Update(&timerPhase));
-            output[0] = buffer[0] * musicVolume >> 8;
-            output[1] = buffer[1] * musicVolume >> 8;
+            UpdateEvents();
+            playSamples += Timer_Update(&timerBeat);
         }
-        else
-        {
-            output[0] = 0;
-            output[1] = 0;
-        }
-
-        output += 2;
-        length -= 2;
     }
+
+    rate = Timer_Update(&timerPhase);
+    while (rate--)
+    {
+        OPL_Generate(buffer);
+    }
+
+    output[0] = buffer[0] * musicVolume >> 8;
+    output[1] = buffer[1] * musicVolume >> 8;
 }
+
 #ifdef MP_TIME
 int Midiplay_Time()
 {
@@ -1121,14 +1239,21 @@ int Midiplay_Time()
     return timeTicks * 10 / beatTicks;
 }
 #endif
+
 void Midiplay_Loop(int looping)
 {
     musicLooping = looping;
 }
 
-void Midiplay_Restart()
+void Midiplay_Replay()
 {
+    // this safeguards the callback from generating events
+    //  whilst we're initialising the tracks
+    musicPlaying++; // pause playback
+
     InitTracks();
+
+    musicPlaying--; // restore playback
 }
 
 // midiplay

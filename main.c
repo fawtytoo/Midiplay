@@ -1,6 +1,20 @@
-// midiplay
+//  Copyright 2021-2024 by Steve Clark
 
-// Copyright 2022 by Steve Clark
+//  This software is provided 'as-is', without any express or implied
+//  warranty.  In no event will the authors be held liable for any damages
+//  arising from the use of this software.
+
+//  Permission is granted to anyone to use this software for any purpose,
+//  including commercial applications, and to alter it and redistribute it
+//  freely, subject to the following restrictions:
+
+//  1. The origin of this software must not be misrepresented; you must not
+//     claim that you wrote the original software. If you use this software
+//     in a product, an acknowledgment in the product documentation would be
+//     appreciated but is not required. 
+//  2. Altered source versions must be plainly marked as such, and must not be
+//     misrepresented as being the original software.
+//  3. This notice may not be removed or altered from any source distribution.
 
 #include <SDL/SDL.h>
 
@@ -14,11 +28,12 @@
 
 #include "midiplay.h"
 
-#define ERROR           printf("%s %s\n\r", argv[arg], strerror(errno))
+#define ERROR           printf("%s: %s\n\r", strerror(errno), name)
 #define INVALID_FILE    printf("Invalid file: %s\n\r", argv[arg])
+#define SMPTE_FILE      printf("SMPTE unsupported: %s\n\r", argv[arg])
 
 #define SAMPLERATE      44100
-#define SAMPLECOUNT     2048
+#define SAMPLECOUNT     1024
 
 #define RMI_HDRSIZE     20
 
@@ -27,18 +42,60 @@ typedef unsigned int    UINT;
 void SdlCallback(void *unused, Uint8 *buffer, int length)
 {
     (void)unused;
+    short   *output = (short *)buffer;
 
-    Midiplay_Output((short *)buffer, length / 2);
+    while (length)
+    {
+        Midiplay_Output(output);
+        output += 2;
+        length -= 4;
+    }
 }
  
-int DoDigits(int number, int count)
+int Digits(int number, int count)
 {
     if (number > 9)
     {
-        count = DoDigits(number / 10, count + 1);
+        count = Digits(number / 10, count + 1);
     }
 
     return count;
+}
+
+char *ReadFile(char *name, int *size)
+{
+    struct stat status;
+    FILE        *file;
+    char        *buffer;
+
+    *size = 0;
+
+    if (stat(name, &status) < 0)
+    {
+        ERROR;
+        return NULL;
+    }
+
+    if (S_ISDIR(status.st_mode))
+    {
+        errno = EISDIR; // needs to be set explicitly
+        ERROR;
+        return NULL;
+    }
+
+    if ((file = fopen(name, "rb")) == NULL)
+    {
+        ERROR;
+        return NULL;
+    }
+
+    buffer = malloc(status.st_size);
+    fread(buffer, status.st_size, 1, file);
+    fclose(file);
+
+    *size = status.st_size;
+
+    return buffer;
 }
 
 int main(int argc, char **argv)
@@ -49,16 +106,18 @@ int main(int argc, char **argv)
     tcflag_t        localMode, outputMode;
     int             blockMode;
 
-    struct stat     status;
-    FILE            *file;
-    char            *buffer, *data;
-    int             size;
+    char            *buffer, *data, *genmidi;
+    int             length;
 
     int             arg;
     char            *name;
+
 #ifdef MP_TIME
     int             time;
 #endif
+
+    int             result;
+
     int             count;
 
     int             looping = 0;
@@ -67,13 +126,32 @@ int main(int argc, char **argv)
 
     char            key;
 
-    if (argc < 2)
+    if (argc < 3)
     {
-        printf("Usage: %s [FILES]\n\tSpecify one or more FILES to play\n", argv[0]);
+        printf("Usage: %s GENMIDI [FILES]\n\tSpecify one or more FILES to play\n", argv[0]);
         return 1;
     }
 
-    printf("P = Play/Pause | N = Next | R = Restart | L = Loop | +/- Volume | Q = Quit\n");
+    if ((genmidi = ReadFile(argv[1], &length)) == NULL)
+    {
+        return 1;
+    }
+
+    if (length != GENMIDI_SIZE)
+    {
+        free(genmidi);
+        printf("GENMIDI byte size incorrect: %i\n", length);
+        return 1;
+    }
+
+    if (Midiplay_Init(SAMPLERATE, genmidi))
+    {
+        free(genmidi);
+        printf("Invalid GENMIDI\n");
+        return 1;
+    }
+
+    printf("P = Play/Pause | N = Next | R = Replay | L = Loop | +/- Volume | Q = Quit\n");
 
     SDL_Init(SDL_INIT_AUDIO);
 
@@ -86,8 +164,6 @@ int main(int argc, char **argv)
     SDL_OpenAudio(&want, NULL);
     SDL_PauseAudio(SDL_TRUE);
 
-    Midiplay_Init(SAMPLERATE);
-
     blockMode = fcntl(STDIN_FILENO, F_GETFL, FNONBLOCK);
     tcgetattr(STDIN_FILENO, &termAttr);
     localMode = termAttr.c_lflag;
@@ -97,42 +173,23 @@ int main(int argc, char **argv)
     tcsetattr(STDIN_FILENO, TCSANOW, &termAttr);
     fcntl(STDIN_FILENO, F_SETFL, FNONBLOCK);
 
-    for (arg = 1; arg < argc; arg++)
+    for (arg = 2; arg < argc; arg++)
     {
-        if (stat(argv[arg], &status) < 0)
+        if ((buffer = ReadFile(argv[arg], &length)) == NULL)
         {
-            ERROR;
             continue;
         }
-
-        if (S_ISDIR(status.st_mode))
-        {
-            errno = EISDIR; // needs to be set explicitly
-            ERROR;
-            continue;
-        }
-
-        if ((file = fopen(argv[arg], "rb")) == NULL)
-        {
-            ERROR;
-            continue;
-        }
-
-        size = status.st_size;
-        buffer = malloc(size);
-        fread(buffer, size, 1, file);
-        fclose(file);
 
         data = buffer;
         if (strncmp(data, "RIFF", 4) == 0)
         {
-            if (size < RMI_HDRSIZE)
+            if (length < RMI_HDRSIZE)
             {
                 INVALID_FILE;
                 continue;
             }
 
-            if (*(UINT *)(data + 4) != size - 8)
+            if (*(UINT *)(data + 4) != length - 8)
             {
                 INVALID_FILE;
                 continue;
@@ -144,17 +201,18 @@ int main(int argc, char **argv)
                 continue;
             }
 
-            if (size - RMI_HDRSIZE < *(UINT *)(data + 16))
+            if (length - RMI_HDRSIZE < *(UINT *)(data + 16))
             {
                 INVALID_FILE;
                 continue;
             }
+            // looks like an RMI file
             // adjust the size to the midi data chunk
-            size = *(UINT *)(data + 16);
+            length = *(UINT *)(data + 16);
             data += RMI_HDRSIZE;
         }
 
-        if (Midiplay_Load(data, size))
+        if ((result = Midiplay_Load(data, length)) == 0)
         {
             if ((name = strrchr(argv[arg], '/')) == NULL)
             {
@@ -165,20 +223,22 @@ int main(int argc, char **argv)
                 name++;
             }
 
-            count = DoDigits(argc - 1, 1);
-            printf("Playing %*i/%i: %s\r\n", count, arg, argc - 1, name);
+            count = Digits(argc - 2, 1);
+            printf("%*i/%i: %s\r\n", count, arg - 1, argc - 2, name);
+
 #ifdef MP_TIME
             time = Midiplay_Time();
-            count = DoDigits(time / 600, 1);
+            count = Digits(time / 600, 1);
             printf("[  ] [    ] %*s / %i:%02i.%i\r", count + 5, " ", time / 600, (time / 10) % 60, time % 10);
 #else
             printf("[  ] [    ]\r");
 #endif
+
             Midiplay_Play(1);
 
             while (Midiplay_IsPlaying())
             {
-                SDL_Delay(1);
+                SDL_Delay(10);
 
                 key = getc(stdin);
                 if (key == 'l')
@@ -212,8 +272,9 @@ int main(int argc, char **argv)
                 }
                 else if (key == 'r')
                 {
-                    Midiplay_Restart();
+                    Midiplay_Replay();
                 }
+
 #ifdef MP_TIME
                 time = Midiplay_Time();
                 printf("[%s%s] [%3i%%] %*i:%02i.%i\r", playing ? " " : "P", looping ? "L" : " ", volume, count, time / 600, (time / 10) % 60, time % 10);
@@ -222,17 +283,23 @@ int main(int argc, char **argv)
 #endif
             }
 
+            Midiplay_Play(0);
+
             printf("\33[K\r");
+        }
+        else if (result == 2)
+        {
+            SMPTE_FILE;
         }
         else
         {
             INVALID_FILE;
         }
 
-        Midiplay_Play(0);
-
         free(buffer);
     }
+
+    free(genmidi);
 
     termAttr.c_lflag = localMode;
     termAttr.c_oflag = outputMode;

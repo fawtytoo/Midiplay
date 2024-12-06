@@ -9,6 +9,10 @@ Written for Linux in C using SDL for audio output.
 
 Midiplay can be integrated directly into any other project by simply omitting `main.c` and using `midiplay.h` for the API calls.
 
+Midiplay is licensed under the Zlib license, and Nuked OPL3 v1.8 under the GNU LGPL v2.1 license.
+
+[GNU Lesser General Public License, version 2.1](https://www.gnu.org/licenses/old-licenses/lgpl-2.1.en.html)
+
 #### Features
 - 24 Voices (minimum for General MIDI Level 1 Spec)
 - OPL synthesis of instruments

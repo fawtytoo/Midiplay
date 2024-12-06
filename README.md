@@ -34,7 +34,7 @@ Audio is generated using a modified version of Nuked OPL3. Strictly speaking, it
 - Post processed operator volume[^2]
 
 [^1]: Change NVOICES in `opl.h` to however many voices are required.
-[^2]: The volume of each group of operators (modulator and carrier) are generated before having any volume change applied.
+[^2]: Each group of operators (modulator and carrier) are generated before having the volume applied.
 
 To take advantage of OPL, you will need a GENMIDI (General Midi instrument data file). This is the same GENMIDI as found in DOOM. To hear the audio at its best, it's recommended to use DMXOPL.
 

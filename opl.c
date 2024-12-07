@@ -52,6 +52,8 @@
 #define ENV_SUSTAIN     2
 #define ENV_RELEASE     3
 
+typedef s16 (*WAVE)(u16, u16);
+
 typedef struct
 {
     s16     out;
@@ -74,7 +76,7 @@ typedef struct
     u8      reg_ksl;        // key scale level
     u8      reg_tl;         // total level (volume)
     u8      reg_sl;         // sustain level
-    int     reg_wf;         // waveform
+    WAVE    Wave;           // wave function
     u8      reg_rate[4];    // attack, decay, sustain & release rates
 }
 OP;
@@ -252,8 +254,6 @@ static const u8     kslshiftTable[4] = {8, 1, 2, 0};
 // envelope generator constants
 static const u8     egincstepTable[4][4] = {{0, 0, 0, 0}, {1, 0, 0, 0}, {1, 0, 1, 0}, {1, 1, 1, 0}};
 
-typedef s16 (*WAVEFORM)(u16, u16);
-
 static void Op_Feedback(OP *op, u8 fb)
 {
     op->fbmod = (op->prout + op->out) >> (0x09 - fb);
@@ -389,7 +389,7 @@ static s16 CalcExp(u32 level)
     return expTable[level & 0xff] >> (level >> 8);
 }
 
-static s16 Waveform0(u16 phase, u16 envelope)
+static s16 Op_Wave0(u16 phase, u16 envelope)
 {
     u16     out = 0;
     u16     neg = 0;
@@ -403,7 +403,7 @@ static s16 Waveform0(u16 phase, u16 envelope)
     return CalcExp(out + envelope) ^ neg;
 }
 
-static s16 Waveform1(u16 phase, u16 envelope)
+static s16 Op_Wave1(u16 phase, u16 envelope)
 {
     u16     out = 0;
 
@@ -419,7 +419,7 @@ static s16 Waveform1(u16 phase, u16 envelope)
     return CalcExp(out + envelope);
 }
 
-static s16 Waveform2(u16 phase, u16 envelope)
+static s16 Op_Wave2(u16 phase, u16 envelope)
 {
     u16     out = 0;
 
@@ -428,7 +428,7 @@ static s16 Waveform2(u16 phase, u16 envelope)
     return CalcExp(out + envelope);
 }
 
-static s16 Waveform3(u16 phase, u16 envelope)
+static s16 Op_Wave3(u16 phase, u16 envelope)
 {
     u16     out = 0;
 
@@ -444,7 +444,7 @@ static s16 Waveform3(u16 phase, u16 envelope)
     return CalcExp(out + envelope);
 }
 
-static s16 Waveform4(u16 phase, u16 envelope)
+static s16 Op_Wave4(u16 phase, u16 envelope)
 {
     u16     out = 0;
     u16     neg = 0;
@@ -465,7 +465,7 @@ static s16 Waveform4(u16 phase, u16 envelope)
     return CalcExp(out + envelope) ^ neg;
 }
 
-static s16 Waveform5(u16 phase, u16 envelope)
+static s16 Op_Wave5(u16 phase, u16 envelope)
 {
     u16     out = 0;
 
@@ -481,7 +481,7 @@ static s16 Waveform5(u16 phase, u16 envelope)
     return CalcExp(out + envelope);
 }
 
-static s16 Waveform6(u16 phase, u16 envelope)
+static s16 Op_Wave6(u16 phase, u16 envelope)
 {
     u16     neg = 0;
 
@@ -493,7 +493,7 @@ static s16 Waveform6(u16 phase, u16 envelope)
     return CalcExp(envelope) ^ neg;
 }
 
-static s16 Waveform7(u16 phase, u16 envelope)
+static s16 Op_Wave7(u16 phase, u16 envelope)
 {
     u16     out = 0;
     u16     neg = 0;
@@ -510,13 +510,7 @@ static s16 Waveform7(u16 phase, u16 envelope)
 
 static void Op_Generate(OP *op)
 {
-    static const WAVEFORM   Waveform[8] =
-    {
-        Waveform0, Waveform1, Waveform2, Waveform3,
-        Waveform4, Waveform5, Waveform6, Waveform7
-    };
-
-    op->out = Waveform[op->reg_wf]((op->pg_phase_out + *op->mod) & 0x3ff, op->eg_out << 3);
+    op->out = op->Wave((op->pg_phase_out + *op->mod) & 0x3ff, op->eg_out << 3);
 }
 
 // opl -------------------------------------------------------------------------
@@ -634,7 +628,40 @@ void OPL_Op(int index, int operator, u8 data[6])
     op->reg_rate[ENV_SUSTAIN] = (data[0] >> 5) & 0x01 ? 0 : data[2] & 0x0f;
     op->reg_rate[ENV_RELEASE] = data[2] & 0x0f;
 
-    op->reg_wf = data[3] & 0x07;
+    switch (data[3] & 0x07)
+    {
+      case 0:
+        op->Wave = Op_Wave0;
+        break;
+
+      case 1:
+        op->Wave = Op_Wave1;
+        break;
+
+      case 2:
+        op->Wave = Op_Wave2;
+        break;
+
+      case 3:
+        op->Wave = Op_Wave3;
+        break;
+
+      case 4:
+        op->Wave = Op_Wave4;
+        break;
+
+      case 5:
+        op->Wave = Op_Wave5;
+        break;
+
+      case 6:
+        op->Wave = Op_Wave6;
+        break;
+
+      case 7:
+        op->Wave = Op_Wave7;
+        break;
+    }
 
     op->reg_ksl = kslshiftTable[data[4] >> 6];
     op->reg_tl = (data[5] & 0x3f) << 2;
@@ -788,5 +815,7 @@ void OPL_Reset()
         voice->op[1].vibrato = &oplZeroS16;
         voice->op[0].eg_rout = 0x1ff;
         voice->op[1].eg_rout = 0x1ff;
+        voice->op[0].Wave = Op_Wave0;
+        voice->op[1].Wave = Op_Wave0;
     }
 }

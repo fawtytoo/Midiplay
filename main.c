@@ -112,9 +112,7 @@ int main(int argc, char **argv)
     int             arg;
     char            *name;
 
-#ifdef MP_TIME
     int             time;
-#endif
 
     int             result;
 
@@ -226,13 +224,9 @@ int main(int argc, char **argv)
             count = Digits(argc - 2, 1);
             printf("%*i/%i: %s\r\n", count, arg - 1, argc - 2, name);
 
-#ifdef MP_TIME
             time = Midiplay_Time();
             count = Digits(time / 600, 1);
             printf("[  ] [    ] %*s / %i:%02i.%i\r", count + 5, " ", time / 600, (time / 10) % 60, time % 10);
-#else
-            printf("[  ] [    ]\r");
-#endif
 
             Midiplay_Play(1);
 
@@ -275,12 +269,8 @@ int main(int argc, char **argv)
                     Midiplay_Replay();
                 }
 
-#ifdef MP_TIME
                 time = Midiplay_Time();
                 printf("[%s%s] [%3i%%] %*i:%02i.%i\r", playing ? " " : "P", looping ? "L" : " ", volume, count, time / 600, (time / 10) % 60, time % 10);
-#else
-                printf("[%s%s] [%3i%%]\r", playing ? " " : "P", looping ? "L" : " ", volume);
-#endif
             }
 
             Midiplay_Play(0);

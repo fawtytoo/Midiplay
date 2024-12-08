@@ -19,9 +19,6 @@
 #ifndef __MIDIPLAY_H__
 #define __MIDIPLAY_H__
 
-// comment this line if the score time is not required
-#define MP_TIME
-
 // file size of genmidi data
 #define GENMIDI_SIZE    11908
 

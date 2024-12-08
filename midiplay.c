@@ -168,9 +168,7 @@ static int          beatTicks = 96, beatTempo = 500000;
 static int          playSamples;
 static u32          musicClock;
 
-#ifdef MP_TIME
 static int          timeTicks, timeTempo;
-#endif
 
 static DOEVENT      MusicEvents;
 
@@ -624,14 +622,12 @@ static void Event_Message()
 }
 
 // control ---------------------------------------------------------------------
-#ifdef MP_TIME
 static void UpdateScoreTime()
 {
     timeTempo += beatTempo;
     timeTicks += (timeTempo / MICROSEC);
     timeTempo %= MICROSEC;
 }
-#endif
 
 static void DoNothing()
 {
@@ -668,9 +664,7 @@ static void InitTracks()
 
     numTracksEnded = 0;
 
-#ifdef MP_TIME
     timeTicks = timeTempo = 0;
-#endif
 
     Timer_Set(&timerPhase, 49716, timerPhase.divisor);
 }
@@ -736,13 +730,11 @@ static u32 GetLength()
     return length;
 }
 
-#ifdef MP_TIME
 // prevents unecessary events during inital score timing
 static void NoEvent(DOEVENT event)
 {
     (void)event;
 }
-#endif
 
 static void NewEvent(DOEVENT event)
 {
@@ -981,9 +973,7 @@ static void TrackMidEvents()
 
 static void UpdateEvents()
 {
-#ifdef MP_TIME
     UpdateScoreTime();
-#endif
 
     MusicEvents();
     musicClock++;
@@ -1073,9 +1063,7 @@ int Midiplay_Init(int samplerate, char *genmidi)
         Voice_AddToUnused(voice);
     }
 
-#ifndef MP_TIME
     AddEvent = NewEvent;
-#endif
 
     musicInit = 1;
 
@@ -1145,14 +1133,12 @@ int Midiplay_Load(void *data, int size)
 
     InitTracks();
 
-#ifdef MP_TIME
     AddEvent = NoEvent;
     while (numTracksEnded < numTracks)
     {
         UpdateEvents();
     }
     AddEvent = NewEvent;
-#endif
 
     musicInit = 2;
 
@@ -1228,7 +1214,6 @@ void Midiplay_Output(short output[2])
     output[1] = buffer[1] * musicVolume >> 8;
 }
 
-#ifdef MP_TIME
 int Midiplay_Time()
 {
     if (musicInit < 2)
@@ -1238,7 +1223,6 @@ int Midiplay_Time()
 
     return timeTicks * 10 / beatTicks;
 }
-#endif
 
 void Midiplay_Loop(int looping)
 {

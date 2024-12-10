@@ -37,6 +37,9 @@
 
 #define RMI_HDRSIZE     20
 
+#define PRINT_STATUS    printf("\r[%s] [%3i%%]", status, volume)
+#define PRINT_TIME(c)   printf(" %*i:%02i.%i\33[%iC", count, time / 600, (time / 10) % 60, time % 10, c)
+
 typedef unsigned int    UINT;
 
 void SdlCallback(void *unused, Uint8 *buffer, int length)
@@ -121,6 +124,7 @@ int main(int argc, char **argv)
     int             looping = 0;
     int             playing = 0;
     int             volume = 100;
+    char            status[3] = "P ";
 
     char            key;
 
@@ -224,9 +228,11 @@ int main(int argc, char **argv)
             count = Digits(argc - 2, 1);
             printf("%*i/%i: %s\r\n", count, arg - 1, argc - 2, name);
 
+            PRINT_STATUS;
             time = Midiplay_Time();
             count = Digits(time / 600, 1);
-            printf("[  ] [    ] %*s / %i:%02i.%i\r", count + 5, " ", time / 600, (time / 10) % 60, time % 10);
+            printf(" %*i:00.0 /", count, 0);
+            PRINT_TIME(1);
 
             Midiplay_Play(1);
 
@@ -238,11 +244,13 @@ int main(int argc, char **argv)
                 if (key == 'l')
                 {
                     looping = 1 - looping;
+                    status[1] = looping ? 'L' : ' ';
                     Midiplay_Loop(looping);
                 }
                 else if (key == 'p')
                 {
                     playing = 1 - playing;
+                    status[0] = playing ? ' ' : 'P';
                     SDL_PauseAudio(playing ? SDL_FALSE : SDL_TRUE);
                 }
                 else if (key == 'n')
@@ -269,13 +277,14 @@ int main(int argc, char **argv)
                     Midiplay_Replay();
                 }
 
+                PRINT_STATUS;
                 time = Midiplay_Time();
-                printf("[%s%s] [%3i%%] %*i:%02i.%i\r", playing ? " " : "P", looping ? "L" : " ", volume, count, time / 600, (time / 10) % 60, time % 10);
+                PRINT_TIME(count + 9);
             }
 
             Midiplay_Play(0);
 
-            printf("\33[K\r");
+            printf("\r\33[K\r");
         }
         else if (result == 2)
         {

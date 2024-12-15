@@ -282,7 +282,7 @@ static const u8     egKeyScaleRateTable[16][16] =
 
 static void Op_Feedback(OP *op, u8 fb)
 {
-    op->fbmod = (op->prout + op->out) >> (0x09 - fb);
+    op->fbmod = (op->prout + op->out) >> fb;
     op->prout = op->out;
 }
 
@@ -606,10 +606,11 @@ void OPL_Pan(int index, int pan)
 void OPL_Feedback(int index, u8 data)
 {
     VOICE   *voice = &oplVoice[index];
+    u8      fb = (data >> 1) & 7;
 
-    voice->fb = (data >> 1) & 7;
+    voice->fb = 9 - fb;
 
-    voice->op[0].mod = voice->fb == 0 ? &oplZeroS16 : &voice->op[0].fbmod;
+    voice->op[0].mod = fb == 0 ? &oplZeroS16 : &voice->op[0].fbmod;
 
     if (data & 0x01)    // AM
     {

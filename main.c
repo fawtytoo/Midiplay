@@ -1,4 +1,4 @@
-//  Copyright 2021-2024 by Steve Clark
+//  Copyright 2021-2025 by Steve Clark
 
 //  This software is provided 'as-is', without any express or implied
 //  warranty.  In no event will the authors be held liable for any damages
@@ -274,7 +274,8 @@ int main(int argc, char **argv)
                 }
                 else if (key == 'r')
                 {
-                    Midiplay_Replay();
+                    Midiplay_Restart();
+                    Midiplay_Play(1);
                 }
 
                 PRINT_STATUS;

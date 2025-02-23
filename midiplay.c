@@ -1,4 +1,4 @@
-//  Copyright 2021-2024 by Steve Clark
+//  Copyright 2021-2025 by Steve Clark
 
 //  This software is provided 'as-is', without any express or implied
 //  warranty.  In no event will the authors be held liable for any damages
@@ -1229,15 +1229,13 @@ void Midiplay_Loop(int looping)
     musicLooping = looping;
 }
 
-void Midiplay_Replay()
+void Midiplay_Restart()
 {
     // this safeguards the callback from generating events
     //  whilst we're initialising the tracks
-    musicPlaying++; // pause playback
+    musicPlaying |= 1; // pause playback
 
     InitTracks();
-
-    musicPlaying--; // restore playback
 }
 
 // midiplay

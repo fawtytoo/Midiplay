@@ -1,4 +1,4 @@
-//  Copyright 2021-2024 by Steve Clark
+//  Copyright 2021-2025 by Steve Clark
 
 //  This software is provided 'as-is', without any express or implied
 //  warranty.  In no event will the authors be held liable for any damages
@@ -63,9 +63,9 @@ int Midiplay_Time(void);
 // looping      Whether the music will repeat (0 = off, 1 = repeating)
 void Midiplay_Loop(int);
 
-// Midiplay_Replay
-// Replays score from beginning
-void Midiplay_Replay(void);
+// Midiplay_Restart
+// Restarts score from beginning (and pauses playback)
+void Midiplay_Restart(void);
 
 #endif
 

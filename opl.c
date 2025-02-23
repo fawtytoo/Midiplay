@@ -43,7 +43,7 @@
 //       LUT optimisations
 //       2-op mode with no percussion modes
 
-//  2023-2024    Steve Clark (fawtytoo)
+//  2023-2025    Steve Clark (fawtytoo)
 
 #include "opl.h"
 
@@ -99,12 +99,10 @@ static u16      oplClock = 0;
 static u32      oplEgTimer = 0;
 static u8       oplEgState = 0;
 static u8       oplEgAdd = 0;
-static s16      oplVibrato;
-static u8       oplVibpos = 0;
-static u8       oplVibshift = 0;        // vibrato depth
+static s16      oplVibrato = 0;
+static u8       oplVibratoShift = 0;    // vibrato depth
 static u8       oplTremolo = 0;
-static u8       oplTremolopos = 0;
-static u8       oplTremoloshift = 0;    // tremolo depth
+static u8       oplTremoloShift = 0;    // tremolo depth
 static s16      oplZeroS16 = 0;
 static u8       oplZeroU8 = 0;
 
@@ -706,6 +704,9 @@ void OPL_Generate(s16 buffer[2])
     s32     mixer[2] = {0, 0};
     s32     acc;
     int     i;
+    int     vibrato_pos = (oplClock >> 10) & 7;
+
+    oplTremolo = tremoloTable[oplTremoloShift][(oplClock >> 6) % 210];
 
     for (i = 0; i < NVOICES; i++, voice++)
     {
@@ -713,7 +714,7 @@ void OPL_Generate(s16 buffer[2])
         Op_Feedback(&voice->op[1], voice->fb);
         Op_Envelope(&voice->op[0], voice->ksv);
         Op_Envelope(&voice->op[1], voice->ksv);
-        oplVibrato = vibratoTable[oplVibshift][(voice->f_num >> 7) & 7][oplVibpos];
+        oplVibrato = vibratoTable[oplVibratoShift][(voice->f_num >> 7) & 7][vibrato_pos];
         Op_PhaseGenerate(&voice->op[0], voice->block, voice->f_num);
         Op_PhaseGenerate(&voice->op[1], voice->block, voice->f_num);
         Op_Generate(&voice->op[0]);
@@ -727,21 +728,6 @@ void OPL_Generate(s16 buffer[2])
 
     buffer[0] = Clip_Sample(mixer[0]);
     buffer[1] = Clip_Sample(mixer[1]);
-
-    if ((oplClock & 0x3f) == 0x3f)
-    {
-        oplTremolopos++;
-        if (oplTremolopos == 210)
-        {
-            oplTremolopos = 0;
-        }
-        oplTremolo = tremoloTable[oplTremoloshift][oplTremolopos];
-    }
-
-    if ((oplClock & 0x3ff) == 0x3ff)
-    {
-        oplVibpos = (oplVibpos + 1) & 7;
-    }
 
     oplClock++;
 
@@ -809,12 +795,12 @@ void OPL_Generate(s16 buffer[2])
 
 void OPL_VibratoDepth(u8 data)
 {
-    oplVibshift = data & 1;
+    oplVibratoShift = data & 1;
 }
 
 void OPL_TremoloDepth(u8 data)
 {
-    oplTremoloshift = data & 1;
+    oplTremoloShift = data & 1;
 }
 
 void OPL_Reset()

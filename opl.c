@@ -52,7 +52,7 @@
 #define ENV_SUSTAIN     2
 #define ENV_RELEASE     3
 
-typedef s16 (*WAVE)(u16, u16);
+typedef s16 (*WAVE)(u16, u16 *);
 
 typedef struct
 {
@@ -395,138 +395,100 @@ static void Op_PhaseGenerate(OP *op, u16 block, u16 f_num)
     op->pg_phase += ((f_num << block) * op->reg_mult >> 2);
 }
 
-static s16 CalcExp(u32 level)
+// wave generate ---------------------------------------------------------------
+static s16 Op_Wave1(u16 phase, u16 *neg)
 {
-    if (level > 0x1fff) // 0x1fff ?! TODO
-    {
-        level = 0x1fff; // right shift 12 bit value up to 31 places?
-    }
-
-    return expTable[level & 0xff] >> (level >> 8);
-}
-
-static s16 Op_Wave0(u16 phase, u16 envelope)
-{
-    u16     out = 0;
-    u16     neg = 0;
-
     if (phase & 0x200)
     {
-        neg = 0xffff;
+        *neg = 0xffff;
     }
-    out = sineTable[phase & 0x1ff];
 
-    return CalcExp(out + envelope) ^ neg;
+    return sineTable[phase & 0x1ff];
 }
 
-static s16 Op_Wave1(u16 phase, u16 envelope)
+static s16 Op_Wave2(u16 phase, u16 *neg)
 {
-    u16     out = 0;
-
     if (phase & 0x200)
     {
-        out = 0x1000;
+        return 0x1000;
     }
-    else
+
+    return sineTable[phase & 0x1ff];
+}
+
+static s16 Op_Wave3(u16 phase, u16 *neg)
+{
+    return sineTable[phase & 0x1ff];
+}
+
+static s16 Op_Wave4(u16 phase, u16 *neg)
+{
+    if (phase & 0x100)
     {
-        out = sineTable[phase & 0x1ff];
+        return 0x1000;
     }
 
-    return CalcExp(out + envelope);
+    return sineTable[phase & 0xff];
 }
 
-static s16 Op_Wave2(u16 phase, u16 envelope)
+static s16 Op_Wave5(u16 phase, u16 *neg)
 {
-    u16     out = 0;
-
-    out = sineTable[phase & 0x1ff];
-
-    return CalcExp(out + envelope);
-}
-
-static s16 Op_Wave3(u16 phase, u16 envelope)
-{
-    u16     out = 0;
+    if (phase & 0x200)
+    {
+        return 0x1000;
+    }
 
     if (phase & 0x100)
     {
-        out = 0x1000;
-    }
-    else
-    {
-        out = sineTable[phase & 0xff];
+        *neg = 0xffff;
     }
 
-    return CalcExp(out + envelope);
+    return sineTable[(phase << 1) & 0x1ff];
 }
 
-static s16 Op_Wave4(u16 phase, u16 envelope)
+static s16 Op_Wave6(u16 phase, u16 *neg)
 {
-    u16     out = 0;
-    u16     neg = 0;
-
     if (phase & 0x200)
     {
-        out = 0x1000;
-    }
-    else
-    {
-        if (phase & 0x100)
-        {
-            neg = 0xffff;
-        }
-        out = sineTable[(phase << 1) & 0x1ff];
+        return 0x1000;
     }
 
-    return CalcExp(out + envelope) ^ neg;
+    return sineTable[(phase << 1) & 0x1ff];
 }
 
-static s16 Op_Wave5(u16 phase, u16 envelope)
+static s16 Op_Wave7(u16 phase, u16 *neg)
 {
-    u16     out = 0;
-
     if (phase & 0x200)
     {
-        out = 0x1000;
-    }
-    else
-    {
-        out = sineTable[(phase << 1) & 0x1ff];
+        *neg = 0xffff;
     }
 
-    return CalcExp(out + envelope);
+    return 0;
 }
 
-static s16 Op_Wave6(u16 phase, u16 envelope)
+static s16 Op_Wave8(u16 phase, u16 *neg)
 {
-    u16     neg = 0;
-
     if (phase & 0x200)
     {
-        neg = 0xffff;
-    }
-
-    return CalcExp(envelope) ^ neg;
-}
-
-static s16 Op_Wave7(u16 phase, u16 envelope)
-{
-    u16     out = 0;
-    u16     neg = 0;
-
-    if (phase & 0x200)
-    {
-        neg = 0xffff;
+        *neg = 0xffff;
         phase = (phase & 0x1ff) ^ 0x1ff;
     }
-    out = phase << 3;
 
-    return CalcExp(out + envelope) ^ neg;
+    return phase << 3;
 }
 
 static void Op_Generate(OP *op)
 {
-    op->out = op->Wave((op->pg_phase_out + *op->mod) & 0x3ff, op->eg_out << 3);
+    u16     neg = 0;
+    u32     level;
+
+    level = op->Wave((op->pg_phase_out + *op->mod) & 0x3ff, &neg) + (op->eg_out << 3);
+    if (level > 0x1fff)
+    {
+        level = 0x1fff;
+    }
+
+    op->out = (expTable[level & 0xff] >> (level >> 8)) ^ neg;
 }
 
 // opl -------------------------------------------------------------------------
@@ -648,35 +610,35 @@ void OPL_Op(int index, int operator, u8 data[6])
     switch (data[3] & 0x07)
     {
       case 0:
-        op->Wave = Op_Wave0;
-        break;
-
-      case 1:
         op->Wave = Op_Wave1;
         break;
 
-      case 2:
+      case 1:
         op->Wave = Op_Wave2;
         break;
 
-      case 3:
+      case 2:
         op->Wave = Op_Wave3;
         break;
 
-      case 4:
+      case 3:
         op->Wave = Op_Wave4;
         break;
 
-      case 5:
+      case 4:
         op->Wave = Op_Wave5;
         break;
 
-      case 6:
+      case 5:
         op->Wave = Op_Wave6;
         break;
 
-      case 7:
+      case 6:
         op->Wave = Op_Wave7;
+        break;
+
+      case 7:
+        op->Wave = Op_Wave8;
         break;
     }
 
@@ -820,7 +782,7 @@ void OPL_Reset()
         voice->op[1].vibrato = &oplZeroS16;
         voice->op[0].eg_rout = 0x1ff;
         voice->op[1].eg_rout = 0x1ff;
-        voice->op[0].Wave = Op_Wave0;
-        voice->op[1].Wave = Op_Wave0;
+        voice->op[0].Wave = Op_Wave1;
+        voice->op[1].Wave = Op_Wave1;
     }
 }

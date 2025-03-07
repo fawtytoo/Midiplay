@@ -97,7 +97,7 @@ typedef struct _voice   VOICE;
 struct _voice
 {
     VOICE   *prev, *next;
-    int     index, count;
+    int     index;
     int     note, pitch;
     int     volume;
     int     playing;
@@ -164,7 +164,7 @@ TRACK;
 static TRACK        midTrack[65536], *curTrack, *endTrack;
 static int          numTracks, numTracksEnded;
 
-static int          beatTicks = 96, beatTempo = 500000;
+static int          beatTicks = 96, beatTempo = MICROSEC / 2;
 static int          playSamples;
 static u32          musicClock;
 
@@ -372,7 +372,6 @@ static void Event_NoteOn()
         // original note value or percussion instrument
         voice->note = note;
 
-        voice->count = count;
         gmVoice = &channel->instrument->voice[count];
 
         OPL_Op(voice->index, 0, gmVoice->mod);
@@ -659,14 +658,14 @@ static void InitTracks()
     musicClock = 0;
     playSamples = 0;
 
-    beatTempo = 500000;
+    beatTempo = MICROSEC / 2;
     Timer_Set(&timerBeat, beatTempo, beatTicks);
 
     numTracksEnded = 0;
 
     timeTicks = timeTempo = 0;
 
-    Timer_Set(&timerPhase, 49716, timerPhase.divisor);
+    timerPhase.acc = 0;
 }
 
 static void SetTempo()
@@ -1036,12 +1035,7 @@ int Midiplay_Init(int samplerate, char *genmidi)
     VOICE   *voice;
     int     i;
 
-    if (!ID(genmidi, "#OPL"))
-    {
-        return 1;
-    }
-
-    if (!ID((genmidi + 4), "_II#"))
+    if (!ID(genmidi, "#OPL") || !ID((genmidi + 4), "_II#"))
     {
         return 1;
     }
@@ -1087,7 +1081,7 @@ int Midiplay_Load(void *data, int size)
         return 1;
     }
 
-    if (ID(byte, "MUS" "\x1a"))
+    if (ID(byte, "MUS\x1a"))
     {
         if (size < MUS_HDRSIZE)
         {

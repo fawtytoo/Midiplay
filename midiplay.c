@@ -20,8 +20,6 @@
 
 #include "midiplay.h"
 
-#define ID(i, a)    (i[0] == a[0] && i[1] == a[1] && i[2] == a[2] && i[3] == a[3])
-
 #define LE16(i)     ((i)[0] | ((i)[1] << 8))
 #define BE16(i)     (((i)[0] << 8) | (i)[1])
 #define BE32(i)     ((BE16(i) << 16) | BE16(i + 2))
@@ -187,6 +185,20 @@ static int      musicInit = 0;
 static int      musicLooping;
 static int      musicPlaying = 0;
 static int      musicVolume = 0x100;
+
+// misc ------------------------------------------------------------------------
+static int ID(void *id, char *check, int size)
+{
+    while (size--)
+    {
+        if (*(char *)id++ != *check++)
+        {
+            return 0;
+        }
+    }
+
+    return 1;
+}
 
 // timer -----------------------------------------------------------------------
 static int Timer_Update(TIMER *timer)
@@ -1001,7 +1013,7 @@ static int LoadMidTracks(int count, u8 *data, int size)
             return 1;
         }
 
-        if (!ID(data, "MTrk"))
+        if (!ID(data, "MTrk", 4))
         {
             return 1;
         }
@@ -1035,7 +1047,7 @@ int Midiplay_Init(int samplerate, char *genmidi)
     VOICE   *voice;
     int     i;
 
-    if (!ID(genmidi, "#OPL") || !ID((genmidi + 4), "_II#"))
+    if (!ID(genmidi, "#OPL_II#", 8))
     {
         return 1;
     }
@@ -1081,7 +1093,7 @@ int Midiplay_Load(void *data, int size)
         return 1;
     }
 
-    if (ID(byte, "MUS\x1a"))
+    if (ID(byte, "MUS\x1a", 4))
     {
         if (size < MUS_HDRSIZE)
         {
@@ -1101,7 +1113,7 @@ int Midiplay_Load(void *data, int size)
 
         LoadMusTrack(byte + LE16(byte + 6));
     }
-    else if (ID(byte, "MThd"))
+    else if (ID(byte, "MThd", 4))
     {
         if (size < MID_HDRSIZE)
         {

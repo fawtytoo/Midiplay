@@ -1,9 +1,7 @@
 # Midiplay
 
 ## A MIDI/MUS player
-Midiplay is a very robust and fully functional command line player for MIDI/MUS using OPL audio synthesis. Also supports the RMI file format; a RIFF container for MIDI.
-
-Midiplay can play both MUS and MIDI files due to their similar structure. MIDI type 0 & 1 files are supported; type 2 is unknown due to lack of suitable files to test with. Similarly, Midiplay does not handle the SMPTE format as it's not widely used, if at all.
+Midiplay is a very robust and fully functional command line player for MIDI using OPL audio synthesis.
 
 Written for Linux in C using SDL for audio output.
 
@@ -13,10 +11,15 @@ Midiplay is licensed under the Zlib license, and Nuked OPL3 v1.8 under the GNU L
 
 [GNU Lesser General Public License, version 2.1](https://www.gnu.org/licenses/old-licenses/lgpl-2.1.en.html)
 
-#### Features
-- 24 Voices (minimum for General MIDI Level 1 Spec)
-- OPL synthesis of instruments
-- Accurate event parsing and timing
+### Features
+Supported MIDI formats:
+- MIDI
+- MUS (DMX)
+- HMP (both versions)
+
+Also supports the RMI file format; a RIFF container for MIDI.
+
+MIDI type 0 & 1 files are supported; type 2 is unknown due to lack of suitable files to test with. Similarly, Midiplay does not handle the SMPTE format as it's not widely used, if at all.
 
 ### Inspiration
 The inspiration for this project came from the original DOOM source code.

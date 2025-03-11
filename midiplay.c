@@ -21,6 +21,7 @@
 #include "midiplay.h"
 
 #define LE16(i)     ((i)[0] | ((i)[1] << 8))
+#define LE32(i)     (LE16(i) | (LE16(i + 2) << 16))
 #define BE16(i)     (((i)[0] << 8) | (i)[1])
 #define BE32(i)     ((BE16(i) << 16) | BE16(i + 2))
 
@@ -146,6 +147,7 @@ static int      voiceCount = 0;
 
 typedef void (*DOEVENT)(void);
 static void (*AddEvent)(DOEVENT);
+static u32 (*GetDelta)(void);
 
 typedef struct
 {
@@ -180,6 +182,7 @@ static const int    controllerMap[16] = // CMD_TYPE would suggest only 16
 // midiplay --------------------------------------------------------------------
 #define MUS_HDRSIZE     16
 #define MID_HDRSIZE     14
+#define HMP_HDRSIZE     68
 
 static int      musicInit = 0;
 static int      musicLooping;
@@ -714,7 +717,7 @@ static void EndOfMidiTrack()
     // curTrack->event does not need to be set
 }
 
-static u32 GetLength()
+static u32 GetDeltaMidi()
 {
     u32     length;
     u8      data;
@@ -734,6 +737,33 @@ static u32 GetLength()
             {
                 data = *curTrack->pos++;
                 length = (length << 7) | (data & 127);
+            }
+        }
+    }
+
+    return length;
+}
+
+static u32 GetDeltaAlt()
+{
+    u32     length;
+    u8      data;
+
+    // unrolled
+    data = *curTrack->pos++;
+    length = (data & 127);
+    if (data < 128)
+    {
+        data = *curTrack->pos++;
+        length |= ((data & 127) << 7);
+        if (data < 128)
+        {
+            data = *curTrack->pos++;
+            length |= ((data & 127) << 14);
+            if (data < 128)
+            {
+                data = *curTrack->pos++;
+                length |= ((data & 127) << 21);
             }
         }
     }
@@ -830,13 +860,13 @@ static int GetMusEvent(u32 *time)
 
     if (last & 0x80)
     {
-        *time = GetLength();
+        *time = GetDeltaMidi();
     }
 
     return last;
 }
 
-static void GetMidEvent()
+static void GetMidiEvent()
 {
     u8      data, event = 0x0;
     u32     length;
@@ -918,7 +948,7 @@ static void GetMidEvent()
             }
         }
 
-        length = GetLength();
+        length = GetDelta();
         curTrack->pos += length;
         return; // don't want to affect running events
     }
@@ -951,7 +981,7 @@ static void TrackMusEvents()
     curTrack->clock += ticks;
 }
 
-static void TrackMidEvents()
+static void TrackMidiEvents()
 {
     u32     ticks;
 
@@ -970,9 +1000,9 @@ static void TrackMidEvents()
                     break;
                 }
 
-                ticks = GetLength();
+                ticks = GetDelta();
                 curTrack->clock += ticks;
-                GetMidEvent();
+                GetMidiEvent();
             }
             while (ticks == 0);
         }
@@ -1001,7 +1031,7 @@ static void LoadMusTrack(u8 *data)
     percChannel = 15;
 }
 
-static int LoadMidTracks(int count, u8 *data, int size)
+static int LoadMidiTracks(int count, u8 *data, int size)
 {
     int     track;
     u32     length;
@@ -1035,7 +1065,39 @@ static int LoadMidTracks(int count, u8 *data, int size)
     numTracks = count;
     endTrack = &midTrack[numTracks - 1];
 
-    MusicEvents = TrackMidEvents;
+    GetDelta = GetDeltaMidi;
+
+    MusicEvents = TrackMidiEvents;
+    percChannel = 9;
+
+    return 0;
+}
+
+static int LoadHmpTrack(int count, u8 *data, int size)
+{
+    int     track;
+    u32     length;
+
+    for (track = 0; track < count; track++)
+    {
+        if (size < 12)
+        {
+            return 1;
+        }
+
+        length = LE32(data + 4);
+        midTrack[track].track = data + 12;
+
+        data += length;
+        size -= length;
+    }
+
+    numTracks = count;
+    endTrack = &midTrack[numTracks - 1];
+
+    GetDelta = GetDeltaAlt;
+
+    MusicEvents = TrackMidiEvents;
     percChannel = 9;
 
     return 0;
@@ -1079,6 +1141,7 @@ int Midiplay_Init(int samplerate, char *genmidi)
 int Midiplay_Load(void *data, int size)
 {
     u8      *byte = (u8 *)data;
+    int     offset;
 
     if (musicInit == 0)
     {
@@ -1127,9 +1190,35 @@ int Midiplay_Load(void *data, int size)
         }
 
         size -= MID_HDRSIZE;
-        if (LoadMidTracks(BE16(byte + 10), byte + MID_HDRSIZE, size) == 1)
+        if (LoadMidiTracks(BE16(byte + 10), byte + MID_HDRSIZE, size) == 1)
         {
             return 1; // track header failed
+        }
+    }
+    else if (ID(byte, "HMIMIDIP", 8))
+    {
+        if (size < HMP_HDRSIZE)
+        {
+            return 1;
+        }
+
+        offset = 708; // HMP version 1
+        if (ID(byte + 8, "013195", 6))
+        {
+            offset = 836; // version 2
+        }
+
+        if (size < LE32(byte + 32))
+        {
+            return 1;
+        }
+
+        beatTicks = 60;
+        // beats per minute seem to be 120 for every HMP file (byte + 56)
+
+        if (LoadHmpTrack(LE32(byte + 48), byte + HMP_HDRSIZE + offset, size) == 1)
+        {
+            return 1;
         }
     }
     else

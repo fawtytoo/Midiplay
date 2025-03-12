@@ -182,7 +182,7 @@ static const int    controllerMap[16] = // CMD_TYPE would suggest only 16
 // midiplay --------------------------------------------------------------------
 #define MUS_HDRSIZE     16
 #define MID_HDRSIZE     14
-#define HMP_HDRSIZE     68
+#define HMP_HDRSIZE     64
 
 static int      musicInit = 0;
 static int      musicLooping;
@@ -1080,6 +1080,11 @@ static int LoadHmpTrack(int count, u8 *data, int size)
         }
 
         length = LE32(data + 4);
+        if (size < length)
+        {
+            return 1;
+        }
+
         midTrack[track].track = data + 12;
 
         data += length;
@@ -1176,21 +1181,24 @@ int Midiplay_Load(void *data, int size)
     }
     else if (size > HMP_HDRSIZE && ID(byte, "HMIMIDIP"))
     {
-        offset = 708; // HMP version 1
-        if (ID(byte + 8, "013195"))
-        {
-            offset = 836; // version 2
-        }
-
+        // with version 1 these are always the same
+        //  but differ by varying amounts in version 2
         if (size < LE32(byte + 32))
         {
             return 1;
         }
 
+        offset = 712; // HMP version 1
+        if (ID(byte + 8, "013195"))
+        {
+            offset += 128; // version 2
+        }
+
         beatTicks = 60;
         // beats per minute seem to be 120 for every HMP file (byte + 56)
 
-        if (LoadHmpTrack(LE32(byte + 48), byte + HMP_HDRSIZE + offset, size) == 1)
+        offset += HMP_HDRSIZE;
+        if (LoadHmpTrack(LE32(byte + 48), byte + offset, size - offset) == 1)
         {
             return 1;
         }

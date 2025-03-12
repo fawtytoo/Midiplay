@@ -698,31 +698,9 @@ void OPL_Generate(s16 buffer[2])
 
     oplTremolo = tremoloTable[oplTremoloShift][(oplClock >> 6) % 210];
 
-    for (i = 0; i < NVOICES; i++, voice++)
-    {
-        Op_Feedback(&voice->op[0], voice->fb);
-        Op_Feedback(&voice->op[1], voice->fb);
-        Op_Envelope(&voice->op[0], voice->ksv);
-        Op_Envelope(&voice->op[1], voice->ksv);
-        oplVibrato = vibratoTable[oplVibratoShift][(voice->f_num >> 7) & 7][vibrato_pos];
-        Op_PhaseGenerate(&voice->op[0], voice->block, voice->f_num);
-        Op_PhaseGenerate(&voice->op[1], voice->block, voice->f_num);
-        Op_Generate(&voice->op[0]);
-        Op_Generate(&voice->op[1]);
+    oplEgTimer += oplEgState;
 
-        acc = (*voice->out[0] + *voice->out[1]) * voice->volume / 256;
-
-        mixer[0] += (acc * voice->left / 128);
-        mixer[1] += (acc * voice->right / 128);
-    }
-
-    buffer[0] = Clip_Sample(mixer[0]);
-    buffer[1] = Clip_Sample(mixer[1]);
-
-    oplClock++;
-
-    oplEgAdd = 0;
-    if (oplEgTimer)
+    if (oplEgState)
     {
         if (oplEgTimer & 1)
         {
@@ -776,9 +754,34 @@ void OPL_Generate(s16 buffer[2])
         {
             oplEgAdd = 13;
         }
+        else
+        {
+            oplEgAdd = 0;
+        }
     }
 
-    oplEgTimer += oplEgState;
+    for (i = 0; i < NVOICES; i++, voice++)
+    {
+        Op_Feedback(&voice->op[0], voice->fb);
+        Op_Feedback(&voice->op[1], voice->fb);
+        Op_Envelope(&voice->op[0], voice->ksv);
+        Op_Envelope(&voice->op[1], voice->ksv);
+        oplVibrato = vibratoTable[oplVibratoShift][(voice->f_num >> 7) & 7][vibrato_pos];
+        Op_PhaseGenerate(&voice->op[0], voice->block, voice->f_num);
+        Op_PhaseGenerate(&voice->op[1], voice->block, voice->f_num);
+        Op_Generate(&voice->op[0]);
+        Op_Generate(&voice->op[1]);
+
+        acc = (*voice->out[0] + *voice->out[1]) * voice->volume / 256;
+
+        mixer[0] += (acc * voice->left / 128);
+        mixer[1] += (acc * voice->right / 128);
+    }
+
+    buffer[0] = Clip_Sample(mixer[0]);
+    buffer[1] = Clip_Sample(mixer[1]);
+
+    oplClock++;
 
     oplEgState ^= 1;
 }

@@ -1039,26 +1039,19 @@ static int LoadMidiTracks(int count, u8 *data, int size)
 
     for (track = 0; track < count; track++)
     {
-        if (size < 8)
+        if (size < 8 || !ID(data, "MTrk"))
         {
             return 1;
         }
 
-        if (!ID(data, "MTrk"))
-        {
-            return 1;
-        }
-
-        length = BE32(data + 4);
-
-        data += 8;
-        size -= 8;
+        length = BE32(data + 4) + 8;
         if (size < length)
         {
             return 1;
         }
 
-        midTrack[track].track = data;
+        midTrack[track].track = data + 8;
+
         data += length;
         size -= length;
     }

@@ -1145,18 +1145,8 @@ int Midiplay_Load(void *data, int size)
     musicInit = 1;
     musicPlaying = 0;
 
-    if (size < 4)
+    if (size > MUS_HDRSIZE && ID(byte, "MUS\x1a"))
     {
-        return 1;
-    }
-
-    if (ID(byte, "MUS\x1a"))
-    {
-        if (size < MUS_HDRSIZE)
-        {
-            return 1;
-        }
-
         if (size < LE16(byte + 6) + LE16(byte + 4))
         {
             return 1;
@@ -1170,13 +1160,8 @@ int Midiplay_Load(void *data, int size)
 
         LoadMusTrack(byte + LE16(byte + 6));
     }
-    else if (ID(byte, "MThd"))
+    else if (size > MID_HDRSIZE && ID(byte, "MThd"))
     {
-        if (size < MID_HDRSIZE)
-        {
-            return 1;
-        }
-
         beatTicks = BE16(byte + 12);
         if (beatTicks < 0)
         {
@@ -1189,13 +1174,8 @@ int Midiplay_Load(void *data, int size)
             return 1; // track header failed
         }
     }
-    else if (ID(byte, "HMIMIDIP"))
+    else if (size > HMP_HDRSIZE && ID(byte, "HMIMIDIP"))
     {
-        if (size < HMP_HDRSIZE)
-        {
-            return 1;
-        }
-
         offset = 708; // HMP version 1
         if (ID(byte + 8, "013195"))
         {

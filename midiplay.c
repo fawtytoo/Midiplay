@@ -145,15 +145,15 @@ static int      voiceCount = 0;
 // control ---------------------------------------------------------------------
 #define MICROSEC    1000000
 
-typedef void (*DOEVENT)(void);
-static void (*AddEvent)(DOEVENT);
+typedef void (*EVENT)(void);
+static void (*AddEvent)(EVENT);
 static u32 (*GetDelta)(void);
 
 typedef struct
 {
     u8      *track, *pos;
     u32     clock;
-    DOEVENT DoEvent;
+    EVENT   Event;
     int     channel;
     u8      data[3];
     u8      running;
@@ -170,7 +170,7 @@ static u32          musicClock;
 
 static int          timeTicks, timeTempo;
 
-static DOEVENT      MusicEvents;
+static EVENT        MusicEvents;
 
 // controller map for MUS
 static const int    controllerMap[16] = // CMD_TYPE would suggest only 16
@@ -657,7 +657,7 @@ static void InitTracks()
         midTrack[i].pos = midTrack[i].track;
         midTrack[i].done = 0;
         midTrack[i].clock = 0;
-        midTrack[i].DoEvent = DoNothing;
+        midTrack[i].Event = DoNothing;
     }
 
     for (i = 0; i < 16; i++)
@@ -700,7 +700,7 @@ static void EndOfTrack()
 static void EndOfMidiTrack()
 {
     EndOfTrack();
-    curTrack->DoEvent = DoNothing;
+    curTrack->Event = DoNothing;
     if (numTracksEnded < numTracks)
     {
         return;
@@ -773,21 +773,21 @@ static u32 GetDeltaAlt()
 }
 
 // prevents unecessary events during inital score timing
-static void NoEvent(DOEVENT event)
+static void NoEvent(EVENT event)
 {
     (void)event;
 }
 
-static void NewEvent(DOEVENT event)
+static void NewEvent(EVENT event)
 {
-    curTrack->DoEvent = event;
+    curTrack->Event = event;
 }
 
 static int GetMusEvent(u32 *time)
 {
     u8      data, last;
 
-    curTrack->DoEvent = DoNothing;
+    curTrack->Event = DoNothing;
 
     data = *curTrack->pos++;
     curTrack->channel = data & 0x0f;
@@ -847,7 +847,7 @@ static int GetMusEvent(u32 *time)
         }
         else
         {
-            curTrack->DoEvent = EndOfTrack;
+            curTrack->Event = EndOfTrack;
         }
         break;
 
@@ -857,7 +857,7 @@ static int GetMusEvent(u32 *time)
         break;
     }
 
-    curTrack->DoEvent();
+    curTrack->Event();
 
     if (last & 0x80)
     {
@@ -872,7 +872,7 @@ static void GetMidiEvent()
     u8      data, event = 0x0;
     u32     length;
 
-    curTrack->DoEvent = DoNothing;
+    curTrack->Event = DoNothing;
 
     data = *curTrack->pos;
 
@@ -937,7 +937,7 @@ static void GetMidiEvent()
             data = *curTrack->pos++;
             if (data == 0x2f) // end of track
             {
-                curTrack->DoEvent = EndOfMidiTrack;
+                curTrack->Event = EndOfMidiTrack;
                 return;
             }
             else if (data == 0x51 && *curTrack->pos == 3)
@@ -945,7 +945,7 @@ static void GetMidiEvent()
                 curTrack->data[0] = curTrack->pos[1];
                 curTrack->data[1] = curTrack->pos[2];
                 curTrack->data[2] = curTrack->pos[3];
-                curTrack->DoEvent = SetTempo;
+                curTrack->Event = SetTempo;
             }
         }
 
@@ -994,7 +994,7 @@ static void TrackMidiEvents()
         {
             do
             {
-                curTrack->DoEvent();
+                curTrack->Event();
 
                 if (curTrack->done)
                 {

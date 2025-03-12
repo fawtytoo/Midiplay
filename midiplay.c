@@ -190,15 +190,16 @@ static int      musicPlaying = 0;
 static int      musicVolume = 0x100;
 
 // misc ------------------------------------------------------------------------
-static int ID(void *id, char *check, int size)
+static int ID(void *id, char *check)
 {
-    while (size--)
+    do
     {
         if (*(char *)id++ != *check++)
         {
             return 0;
         }
     }
+    while (*check);
 
     return 1;
 }
@@ -1043,7 +1044,7 @@ static int LoadMidiTracks(int count, u8 *data, int size)
             return 1;
         }
 
-        if (!ID(data, "MTrk", 4))
+        if (!ID(data, "MTrk"))
         {
             return 1;
         }
@@ -1109,7 +1110,7 @@ int Midiplay_Init(int samplerate, char *genmidi)
     VOICE   *voice;
     int     i;
 
-    if (!ID(genmidi, "#OPL_II#", 8))
+    if (!ID(genmidi, "#OPL_II#"))
     {
         return 1;
     }
@@ -1156,7 +1157,7 @@ int Midiplay_Load(void *data, int size)
         return 1;
     }
 
-    if (ID(byte, "MUS\x1a", 4))
+    if (ID(byte, "MUS\x1a"))
     {
         if (size < MUS_HDRSIZE)
         {
@@ -1176,7 +1177,7 @@ int Midiplay_Load(void *data, int size)
 
         LoadMusTrack(byte + LE16(byte + 6));
     }
-    else if (ID(byte, "MThd", 4))
+    else if (ID(byte, "MThd"))
     {
         if (size < MID_HDRSIZE)
         {
@@ -1195,7 +1196,7 @@ int Midiplay_Load(void *data, int size)
             return 1; // track header failed
         }
     }
-    else if (ID(byte, "HMIMIDIP", 8))
+    else if (ID(byte, "HMIMIDIP"))
     {
         if (size < HMP_HDRSIZE)
         {
@@ -1203,7 +1204,7 @@ int Midiplay_Load(void *data, int size)
         }
 
         offset = 708; // HMP version 1
-        if (ID(byte + 8, "013195", 6))
+        if (ID(byte + 8, "013195"))
         {
             offset = 836; // version 2
         }

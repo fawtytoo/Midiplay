@@ -40,7 +40,15 @@
 #define PRINT_STATUS    printf("\r[%s] [%3i%%]", status, volume)
 #define PRINT_TIME(c)   printf(" %*i:%02i.%i\33[%iC", count, time / 600, (time / 10) % 60, time % 10, c)
 
-typedef unsigned int    UINT;
+typedef unsigned char   u8;
+typedef unsigned int    u32;
+
+u32 LE32(char *data)
+{
+    u8      *byte = (u8 *)data;
+
+    return (u32)(*byte | (*(byte + 1) << 8) | (*(byte + 2) << 16) | (*(byte + 3) << 24));
+}
 
 void SdlCallback(void *unused, Uint8 *buffer, int length)
 {
@@ -191,7 +199,7 @@ int main(int argc, char **argv)
                 continue;
             }
 
-            if (*(UINT *)(data + 4) != length - 8)
+            if (LE32(data + 4) != length - 8)
             {
                 INVALID_FILE;
                 continue;
@@ -203,14 +211,14 @@ int main(int argc, char **argv)
                 continue;
             }
 
-            if (length - RMI_HDRSIZE < *(UINT *)(data + 16))
+            if (length - RMI_HDRSIZE < LE32(data + 16))
             {
                 INVALID_FILE;
                 continue;
             }
             // looks like an RMI file
             // adjust the size to the midi data chunk
-            length = *(UINT *)(data + 16);
+            length = LE32(data + 16);
             data += RMI_HDRSIZE;
         }
 

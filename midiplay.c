@@ -137,7 +137,7 @@ static CHANNEL  midChannel[16] =
     {.voice = {.prev = &midChannel[15].voice, .next = &midChannel[15].voice, .volume = 257}, .tuning[0] = 0}
 };
 static VOICE    midVoice[NVOICES];
-static VOICE    voiceList = {.prev = &voiceList, .next = &voiceList};
+static VOICE    voiceList = {.prev = &voiceList, .next = &voiceList, .index = 0};
 
 static int      percChannel = 9;
 static int      voiceCount = 0;
@@ -227,6 +227,20 @@ static void Timer_Set(TIMER *timer, int numerator, int divisor)
 }
 
 // event -----------------------------------------------------------------------
+static void Voice_ToList(VOICE *list, VOICE *voice)
+{
+    voice->next = list;
+    voice->prev = list->prev;
+    list->prev = voice;
+    voice->prev->next = voice;
+}
+
+static void Voice_FromList(VOICE *voice)
+{
+    voice->prev->next = voice->next;
+    voice->next->prev = voice->prev;
+}
+
 static void ResetChannel(int channel)
 {
     midChannel[channel].sustain = 0;
@@ -235,22 +249,12 @@ static void ResetChannel(int channel)
     midChannel[channel].rpn = (127 << 7) | 127;
 }
 
-static void Voice_AddToUnused(VOICE *voice)
-{
-    voice->next = &voiceList;
-    voice->prev = voiceList.prev;
-    voiceList.prev = voice;
-    voice->prev->next = voice;
-}
-
 static void Voice_Off(VOICE *voice)
 {
     OPL_VoiceOff(voice->index);
 
-    voice->prev->next = voice->next;
-    voice->next->prev = voice->prev;
-
-    Voice_AddToUnused(voice);
+    Voice_FromList(voice);
+    Voice_ToList(&voiceList, voice);
 
     voiceCount--;
 }
@@ -378,12 +382,8 @@ static void Event_NoteOn()
     for ( ; voiceList.next != &voiceList && count < channel->voiceCount; count++)
     {
         voice = voiceList.next;
-        voiceList.next = voice->next;
-        voice->next->prev = &voiceList;
-        voice->next = channel->voice.next;
-        voice->next->prev = voice;
-        channel->voice.next = voice;
-        voice->prev = &channel->voice;
+        Voice_FromList(voice);
+        Voice_ToList(&channel->voice, voice);
 
         // original note value or percussion instrument
         voice->note = note;
@@ -1106,7 +1106,6 @@ static int LoadHmpTrack(int count, u8 *data, int size)
 int Midiplay_Init(int samplerate, char *genmidi)
 {
     VOICE   *voice;
-    int     i;
 
     if (!ID(genmidi, "#OPL_II#"))
     {
@@ -1124,10 +1123,10 @@ int Midiplay_Init(int samplerate, char *genmidi)
     Timer_Set(&timerSecond, MICROSEC, samplerate);
 
     voice = &midVoice[0];
-    for (i = 0; i < NVOICES; i++, voice++)
+    for ( ; voiceList.prev->index < NVOICES; voice++)
     {
-        voice->index = i;
-        Voice_AddToUnused(voice);
+        voice->index = voiceList.prev->index + 1;
+        Voice_ToList(&voiceList, voice);
     }
 
     AddEvent = NewEvent;

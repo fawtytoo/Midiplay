@@ -610,7 +610,7 @@ void OPL_Feedback(int index, u8 data)
     {
         voice->op[1].mod = &voice->op[0].out;
         voice->out[0] = &voice->op[1].out;
-        voice->out[1] = &oplZeroS16;
+        voice->out[1] = &voice->op[1].out /*&oplZeroS16*/; // experimental
     }
 }
 

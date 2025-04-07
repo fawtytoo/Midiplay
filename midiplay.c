@@ -715,7 +715,6 @@ static void EndOfMidiTrack()
     InitTracks();
     // at this point we need to parse a new event from track 0
     curTrack = &midTrack[0];
-    // curTrack->event does not need to be set
 }
 
 static u32 GetDeltaMidi()

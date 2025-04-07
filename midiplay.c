@@ -137,7 +137,7 @@ static CHANNEL  midChannel[16] =
     {.voice = {.prev = &midChannel[15].voice, .next = &midChannel[15].voice, .volume = 257}, .tuning[0] = 0}
 };
 static VOICE    midVoice[NVOICES];
-static VOICE    voiceList = {.prev = &voiceList, .next = &voiceList, .index = 0};
+static VOICE    voiceList = {.prev = &voiceList, .next = &voiceList, .index = -1};
 
 static int      percChannel = 9;
 static int      voiceCount = 0;
@@ -1132,7 +1132,7 @@ int Midiplay_Init(int samplerate, char *genmidi)
     Timer_Set(&timerSecond, MICROSEC, samplerate);
 
     voice = &midVoice[0];
-    for ( ; voiceList.prev->index < NVOICES; voice++)
+    for ( ; voiceList.prev->index + 1 < NVOICES; voice++)
     {
         voice->index = voiceList.prev->index + 1;
         Voice_ToList(&voiceList, voice);

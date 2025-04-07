@@ -13,13 +13,13 @@ Midiplay is licensed under the Zlib license, and Nuked OPL3 v1.8 under the GNU L
 
 ### Features
 Supported MIDI formats:
-- MIDI
+- MIDI (types 0, 1 & 2)[^3]
 - MUS (DMX)
 - HMP (both versions)
 
 Also supports the RMI file format; a RIFF container for MIDI.
 
-MIDI type 0 & 1 files are supported; type 2 is unknown due to lack of suitable files to test with. Similarly, Midiplay does not handle the SMPTE format as it's not widely used, if at all.
+[^3]: Midiplay does not handle the SMPTE format as it's not widely used, if at all.
 
 ### Inspiration
 The inspiration for this project came from the original DOOM source code.

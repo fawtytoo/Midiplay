@@ -164,6 +164,8 @@ TRACK;
 static TRACK        midTrack[65536], *curTrack, *endTrack;
 static int          numTracks, numTracksEnded;
 
+static int          midType2;
+
 static int          beatTicks = 96, beatTempo = MICROSEC / 2;
 static int          playSamples;
 static u32          musicClock;
@@ -678,6 +680,7 @@ static void InitTracks()
     Timer_Set(&timerBeat, beatTempo, beatTicks);
 
     numTracksEnded = 0;
+    curTrack = &midTrack[0];
 
     timeTicks = timeTempo = 0;
 
@@ -703,6 +706,11 @@ static void EndOfMidiTrack()
     curTrack->Event = DoNothing;
     if (numTracksEnded < numTracks)
     {
+        if (midType2)
+        {
+            curTrack++;
+            curTrack->clock = musicClock;
+        }
         return;
     }
 
@@ -713,8 +721,6 @@ static void EndOfMidiTrack()
     }
 
     InitTracks();
-    // at this point we need to parse a new event from track 0
-    curTrack = &midTrack[0];
 }
 
 static u32 GetDeltaMidi()
@@ -981,31 +987,36 @@ static void TrackMusEvents()
     curTrack->clock += ticks;
 }
 
-static void TrackMidiEvents()
+static void SingleTrackMidiEvents()
 {
     u32     ticks;
 
+    if (curTrack->clock == musicClock)
+    {
+        do
+        {
+            curTrack->Event();
+
+            if (curTrack->done)
+            {
+                break;
+            }
+
+            ticks = GetDelta();
+            curTrack->clock += ticks;
+            GetMidiEvent();
+        }
+        while (ticks == 0);
+    }
+}
+
+static void TrackMidiEvents()
+{
     curTrack = &midTrack[0];
 
     do
     {
-        if (curTrack->clock == musicClock)
-        {
-            do
-            {
-                curTrack->Event();
-
-                if (curTrack->done)
-                {
-                    break;
-                }
-
-                ticks = GetDelta();
-                curTrack->clock += ticks;
-                GetMidiEvent();
-            }
-            while (ticks == 0);
-        }
+        SingleTrackMidiEvents();
 
         curTrack++;
     }
@@ -1023,7 +1034,6 @@ static void UpdateEvents()
 static void LoadMusTrack(u8 *data)
 {
     midTrack[0].track = data;
-    curTrack = &midTrack[0];
 
     numTracks = 1;
 
@@ -1148,6 +1158,8 @@ int Midiplay_Load(void *data, int size)
     musicInit = 1;
     musicPlaying = 0;
 
+    midType2 = 0;
+
     if (size > MUS_HDRSIZE && ID(byte, "MUS\x1a"))
     {
         if (size < LE16(byte + 6) + LE16(byte + 4))
@@ -1175,6 +1187,11 @@ int Midiplay_Load(void *data, int size)
         if (LoadMidiTracks(BE16(byte + 10), byte + MID_HDRSIZE, size) == 1)
         {
             return 1; // track header failed
+        }
+        if (BE16(byte + 8) == 2)
+        {
+            midType2 = 1;
+            MusicEvents = SingleTrackMidiEvents;
         }
     }
     else if (size > HMP_HDRSIZE && ID(byte, "HMIMIDIP"))

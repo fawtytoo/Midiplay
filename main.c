@@ -28,9 +28,9 @@
 
 #include "midiplay.h"
 
-#define ERROR           printf("%s: %s\n\r", strerror(errno), name)
-#define UNKNOWN_FILE    printf("Unknown/unsupported\n\r") // error 2
-#define INVALID_FILE    printf("Internal file error\n\r") // error 3
+#define ERROR           printf("\t%s\n\r", strerror(errno))
+#define UNKNOWN_FILE    printf("\tUnknown/unsupported\n\r") // error 2
+#define INVALID_FILE    printf("\tInternal file error\n\r") // error 3
 
 #define SAMPLERATE      44100
 #define SAMPLECOUNT     1024
@@ -185,6 +185,18 @@ int main(int argc, char **argv)
 
     for (arg = 2; arg < argc; arg++)
     {
+        if ((name = strrchr(argv[arg], '/')) == NULL)
+        {
+            name = argv[arg];
+        }
+        else
+        {
+            name++;
+        }
+
+        count = Digits(argc - 2, 1);
+        printf("%*i/%i: %s\r\n", count, arg - 1, argc - 2, name);
+
         if ((buffer = ReadFile(argv[arg], &length)) == NULL)
         {
             continue;
@@ -224,18 +236,6 @@ int main(int argc, char **argv)
 
         if ((result = Midiplay_Load(data, length)) == 0)
         {
-            if ((name = strrchr(argv[arg], '/')) == NULL)
-            {
-                name = argv[arg];
-            }
-            else
-            {
-                name++;
-            }
-
-            count = Digits(argc - 2, 1);
-            printf("%*i/%i: %s\r\n", count, arg - 1, argc - 2, name);
-
             PRINT_STATUS;
             time = Midiplay_Time();
             count = Digits(time / 600, 1);

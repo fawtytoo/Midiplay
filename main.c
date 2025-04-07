@@ -29,8 +29,8 @@
 #include "midiplay.h"
 
 #define ERROR           printf("%s: %s\n\r", strerror(errno), name)
-#define INVALID_FILE    printf("Invalid file: %s\n\r", argv[arg])
-#define SMPTE_FILE      printf("SMPTE unsupported: %s\n\r", argv[arg])
+#define UNKNOWN_FILE    printf("Unknown/unsupported\n\r") // error 2
+#define INVALID_FILE    printf("Internal file error\n\r") // error 3
 
 #define SAMPLERATE      44100
 #define SAMPLECOUNT     1024
@@ -297,9 +297,9 @@ int main(int argc, char **argv)
         }
         else if (result == 2)
         {
-            SMPTE_FILE;
+            UNKNOWN_FILE;
         }
-        else
+        else if (result == 3)
         {
             INVALID_FILE;
         }

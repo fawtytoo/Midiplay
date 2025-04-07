@@ -25,13 +25,13 @@
 // Midiplay_Init(samplerate, genmidi)
 // samplerate   The samplerate of the audio output stream
 // genmidi      GENMIDI instrument data
-// Return 1 on success, 0 on failure
+// Returns 0 on success, 1 on failure
 int Midiplay_Init(int, char *);
 
 // Midiplay_Load(data, size)
 // data         Memory pointer to the music data
 // size         Size of the music data in bytes
-// Returns 0 on success, 1 on failure or 2 if unsupported
+// Returns 0 on success, 1 if not Init'ed, 2 if unsupported or 3 on failure
 int Midiplay_Load(void *, int);
 
 // Midiplay_Play(playing)

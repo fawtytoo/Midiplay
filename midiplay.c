@@ -1164,7 +1164,7 @@ int Midiplay_Load(void *data, int size)
     {
         if (size < LE16(byte + 6) + LE16(byte + 4))
         {
-            return 1;
+            return 3;
         }
 
         beatTicks = LE16(byte + 14);
@@ -1186,7 +1186,7 @@ int Midiplay_Load(void *data, int size)
         size -= MID_HDRSIZE;
         if (LoadMidiTracks(BE16(byte + 10), byte + MID_HDRSIZE, size) == 1)
         {
-            return 1; // track header failed
+            return 3;
         }
         if (BE16(byte + 8) == 2)
         {
@@ -1200,7 +1200,7 @@ int Midiplay_Load(void *data, int size)
         //  but differ by varying amounts in version 2
         if (size < LE32(byte + 32))
         {
-            return 1;
+            return 3;
         }
 
         offset = 712; // HMP version 1
@@ -1215,12 +1215,12 @@ int Midiplay_Load(void *data, int size)
         offset += HMP_HDRSIZE;
         if (LoadHmpTrack(LE32(byte + 48), byte + offset, size - offset) == 1)
         {
-            return 1;
+            return 3;
         }
     }
     else
     {
-        return 1;
+        return 2;
     }
 
     InitTracks();

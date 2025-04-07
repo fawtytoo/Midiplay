@@ -36,7 +36,7 @@
 #ifndef __OPL_H__
 #define __OPL_H__
 
-#define NVOICES     24
+#define NVOICES     128
 
 typedef unsigned int    u32;
 typedef signed int      s32;

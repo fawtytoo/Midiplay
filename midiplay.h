@@ -42,10 +42,10 @@ void Midiplay_Play(int);
 // volume       Range 0 (minimum) to 127 (maximum)
 void Midiplay_SetVolume(int);
 
-// Midiplay_Output(buffer)
-// buffer       Pointer to buffer sample
-// Audio is rendered as a stereo 16bit signed sample
-void Midiplay_Output(short [2]);
+// Midiplay_Output(sample)
+// sample       Pointer to signed 32bit stereo sample
+// Audio should be clamped by the calling function to signed 16bit
+void Midiplay_Output(int [2]);
 
 // Midiplay_IsPlaying
 // Returns 0 if not playing

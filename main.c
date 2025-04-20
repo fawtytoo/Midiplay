@@ -64,18 +64,19 @@ short Clamp(int sample)
     return (short)sample;
 }
 
-void SdlCallback(void *unused, Uint8 *buffer, int length)
+void SdlCallback(void *unused, Uint8 *stream, int length)
 {
     (void)unused;
 
-    short   *output = (short *)buffer;
+    short   *output = (short *)stream;
+    int     sample[2];
 
     while (length)
     {
-        Midiplay_Output(output);
-        output[0] = Clamp(output[0]);
-        output[1] = Clamp(output[1]);
-        output += 2;
+        Midiplay_Output(sample);
+        *output++ = Clamp(sample[0]);
+        *output++ = Clamp(sample[1]);
+
         length -= 4;
     }
 }

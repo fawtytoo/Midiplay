@@ -674,24 +674,9 @@ void OPL_Op(int index, int operator, u8 data[6])
     op->reg_tl = (data[5] & 0x3f) << 2;
 }
 
-static s16 Clip_Sample(s32 sample)
-{
-    if (sample > 32767)
-    {
-        sample = 32767;
-    }
-    else if (sample < -32768)
-    {
-        sample = -32768;
-    }
-
-    return (s16)sample;
-}
-
-void OPL_Generate(s16 buffer[2])
+void OPL_Generate(s32 sample[2])
 {
     VOICE   *voice = &oplVoice[0];
-    s32     mixer[2] = {0, 0};
     s32     acc;
     int     i;
     int     vibrato_pos = (oplClock >> 10) & 7;
@@ -774,12 +759,9 @@ void OPL_Generate(s16 buffer[2])
 
         acc = (*voice->out[0] + *voice->out[1]) * voice->volume / 256;
 
-        mixer[0] += (acc * voice->left / 128);
-        mixer[1] += (acc * voice->right / 128);
+        sample[0] += (acc * voice->left / 128);
+        sample[1] += (acc * voice->right / 128);
     }
-
-    buffer[0] = Clip_Sample(mixer[0]);
-    buffer[1] = Clip_Sample(mixer[1]);
 
     oplClock++;
 

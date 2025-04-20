@@ -46,7 +46,7 @@ typedef unsigned char   u8;
 typedef signed char     s8;
 
 void OPL_Reset(void);
-void OPL_Generate(s16 [2]);
+void OPL_Generate(s32 [2]);
 void OPL_TremoloDepth(u8);
 void OPL_VibratoDepth(u8);
 void OPL_Op(int, int, u8 [6]);

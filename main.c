@@ -50,14 +50,31 @@ u32 LE32(char *data)
     return (u32)(*byte | (*(byte + 1) << 8) | (*(byte + 2) << 16) | (*(byte + 3) << 24));
 }
 
+short Clamp(int sample)
+{
+    if (sample > 32767)
+    {
+        sample = 32767;
+    }
+    else if (sample < -32768)
+    {
+        sample = -32768;
+    }
+
+    return (short)sample;
+}
+
 void SdlCallback(void *unused, Uint8 *buffer, int length)
 {
     (void)unused;
+
     short   *output = (short *)buffer;
 
     while (length)
     {
         Midiplay_Output(output);
+        output[0] = Clamp(output[0]);
+        output[1] = Clamp(output[1]);
         output += 2;
         length -= 4;
     }

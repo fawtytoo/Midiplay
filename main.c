@@ -221,15 +221,9 @@ int main(int argc, char **argv)
         }
 
         data = buffer;
-        if (strncmp(data, "RIFF", 4) == 0)
+        if (length >= 4 && strncmp(data, "RIFF", 4) == 0)
         {
-            if (length < RMI_HDRSIZE)
-            {
-                INVALID_FILE;
-                continue;
-            }
-
-            if (LE32(data + 4) != length - 8)
+            if (length < RMI_HDRSIZE || LE32(data + 4) > length - 8)
             {
                 INVALID_FILE;
                 continue;

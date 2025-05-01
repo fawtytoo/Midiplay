@@ -72,7 +72,7 @@ typedef struct
 }
 TIMER;
 
-static TIMER    timerPhase, timerSecond, timerBeat;
+static TIMER    timerPhase, timerSecond, timerBeat, timerTempo;
 
 // event -----------------------------------------------------------------------
 #define NOTE_OFF        0
@@ -170,7 +170,7 @@ static int          beatTicks = 96, beatTempo = MICROSEC / 2;
 static int          playSamples;
 static u32          musicClock;
 
-static int          timeTicks, timeTempo;
+static int          timeTicks;
 
 static EVENT        MusicEvents;
 
@@ -639,13 +639,6 @@ static void Event_Message()
 }
 
 // control ---------------------------------------------------------------------
-static void UpdateScoreTime()
-{
-    timeTempo += beatTempo;
-    timeTicks += (timeTempo / MICROSEC);
-    timeTempo %= MICROSEC;
-}
-
 static void DoNothing()
 {
 }
@@ -655,6 +648,7 @@ static void SetBeatTempo(int tempo)
     beatTempo = tempo;
 
     Timer_Set(&timerBeat, tempo, beatTicks);
+    Timer_Set(&timerTempo, beatTempo, MICROSEC);
 }
 
 static void InitTracks()
@@ -688,7 +682,7 @@ static void InitTracks()
     numTracksEnded = 0;
     curTrack = &midTrack[0];
 
-    timeTicks = timeTempo = 0;
+    timeTicks = 0;
 
     timerPhase.acc = 0;
 }
@@ -1030,7 +1024,7 @@ static void TrackMidiEvents()
 
 static void UpdateEvents()
 {
-    UpdateScoreTime();
+    timeTicks += Timer_Update(&timerTempo);
 
     MusicEvents();
     musicClock++;

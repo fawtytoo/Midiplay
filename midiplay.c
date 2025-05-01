@@ -72,7 +72,7 @@ typedef struct
 }
 TIMER;
 
-static TIMER    timerPhase, timerSecond, timerBeat, timerTempo;
+static TIMER    timerPhase, timerSample, timerTick;
 
 // event -----------------------------------------------------------------------
 #define NOTE_OFF        0
@@ -170,7 +170,7 @@ static int          beatTicks = 96, beatTempo = MICROSEC / 2;
 static int          playSamples;
 static u32          musicClock;
 
-static int          timeTicks;
+static int          timeTicks, timeRate;
 
 static EVENT        MusicEvents;
 
@@ -647,8 +647,7 @@ static void SetBeatTempo(int tempo)
 {
     beatTempo = tempo;
 
-    Timer_Set(&timerBeat, tempo, beatTicks);
-    Timer_Set(&timerTempo, beatTempo, MICROSEC);
+    Timer_Set(&timerTick, tempo, beatTicks);
 }
 
 static void InitTracks()
@@ -678,11 +677,12 @@ static void InitTracks()
     playSamples = 0;
 
     SetBeatTempo(MICROSEC / 2);
+    timerSample.acc = 0;
 
     numTracksEnded = 0;
     curTrack = &midTrack[0];
 
-    timeTicks = 0;
+    timeTicks = timeRate = 0;
 
     timerPhase.acc = 0;
 }
@@ -1022,12 +1022,21 @@ static void TrackMidiEvents()
     while (curTrack <= endTrack);
 }
 
-static void UpdateEvents()
+static int UpdateEvents()
 {
-    timeTicks += Timer_Update(&timerTempo);
+    int     rate = Timer_Update(&timerTick);
 
     MusicEvents();
     musicClock++;
+
+    timeRate += rate;
+    if (timeRate >= MICROSEC / 10)
+    {
+        timeRate -= MICROSEC / 10;
+        timeTicks++;
+    }
+
+    return rate;
 }
 
 static void LoadMusTrack(u8 *data)
@@ -1128,7 +1137,7 @@ int Midiplay_Init(int samplerate, char *genmidi)
     OPL_Reset();
 
     Timer_Set(&timerPhase, 49716, samplerate);
-    Timer_Set(&timerSecond, MICROSEC, samplerate);
+    Timer_Set(&timerSample, MICROSEC, samplerate);
 
     voice = &midVoice[0];
     for ( ; voiceList.prev->index + 1 < NVOICES; voice++)
@@ -1288,11 +1297,10 @@ void Midiplay_Output(int sample[2])
 
     if (musicPlaying == 2)
     {
-        playSamples -= Timer_Update(&timerSecond);
+        playSamples -= Timer_Update(&timerSample);
         if (playSamples < 0)
         {
-            UpdateEvents();
-            playSamples += Timer_Update(&timerBeat);
+            playSamples += UpdateEvents();
         }
     }
 
@@ -1314,7 +1322,7 @@ int Midiplay_Time()
         return 0;
     }
 
-    return timeTicks * 10 / beatTicks;
+    return timeTicks;
 }
 
 void Midiplay_Loop(int looping)

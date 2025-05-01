@@ -650,6 +650,13 @@ static void DoNothing()
 {
 }
 
+static void SetBeatTempo(int tempo)
+{
+    beatTempo = tempo;
+
+    Timer_Set(&timerBeat, tempo, beatTicks);
+}
+
 static void InitTracks()
 {
     int     i;
@@ -676,8 +683,7 @@ static void InitTracks()
     musicClock = 0;
     playSamples = 0;
 
-    beatTempo = MICROSEC / 2;
-    Timer_Set(&timerBeat, beatTempo, beatTicks);
+    SetBeatTempo(MICROSEC / 2);
 
     numTracksEnded = 0;
     curTrack = &midTrack[0];
@@ -690,8 +696,7 @@ static void InitTracks()
 static void SetTempo()
 {
     // if the tempo changes, should playSamples be reset?
-    beatTempo = (curTrack->data[0] << 16) | (curTrack->data[1] << 8) | curTrack->data[2];
-    Timer_Set(&timerBeat, beatTempo, beatTicks);
+    SetBeatTempo((curTrack->data[0] << 16) | (curTrack->data[1] << 8) | curTrack->data[2]);
 }
 
 static void EndOfTrack()

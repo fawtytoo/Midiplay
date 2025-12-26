@@ -192,11 +192,13 @@ static int      musicPlaying = 0;
 static int      musicVolume = 0x100;
 
 // misc ------------------------------------------------------------------------
-static int ID(void *id, char *check)
+static int ID(void *ptr, char *check)
 {
+    char    *id = (char *)ptr;
+
     do
     {
-        if (*(char *)id++ != *check++)
+        if (*id++ != *check++)
         {
             return 0;
         }

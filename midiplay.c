@@ -196,10 +196,11 @@ static int ID(void *id, char *check)
 {
     do
     {
-        if (*(char *)id++ != *check++)
+        if (*(char *)id != *check++)
         {
             return 0;
         }
+        id = (char *)id + 1;        
     }
     while (*check);
 

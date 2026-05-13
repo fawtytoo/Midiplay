@@ -43,7 +43,7 @@
 //       LUT optimisations
 //       2-op mode with no percussion modes
 
-//  2023-2025    Steve Clark (fawtytoo)
+//  2023-2026    Steve Clark (fawtytoo)
 
 #include "opl.h"
 
@@ -272,12 +272,33 @@ static const u8     kslTable[8][16] =
 static const u8     kslShiftTable[4] = {8, 1, 2, 0};
 
 // envelope generator constants
-static const u8     egIncStepTable[4][4][4] =
+static const u8     is1 = 1, is2 = 2, is3 = 3;
+static const u8     *egIncStepTable[4][4][4] =
 {
-    {{0, 0, 0, 0}, {1, 0, 0, 0}, {1, 0, 1, 0}, {1, 1, 1, 0}},
-    {{1, 1, 1, 1}, {2, 1, 1, 1}, {2, 1, 2, 1}, {2, 2, 2, 1}},
-    {{2, 2, 2, 2}, {3, 2, 2, 2}, {3, 2, 3, 2}, {3, 3, 3, 2}},
-    {{3, 3, 3, 3}, {3, 3, 3, 3}, {3, 3, 3, 3}, {3, 3, 3, 3}}
+    {
+        {&oplEgState, &oplEgState, &oplEgState, &oplEgState},
+        {&is1,        &oplEgState, &oplEgState, &oplEgState},
+        {&is1,        &oplEgState, &is1,        &oplEgState},
+        {&is1,        &is1,        &is1,        &oplEgState}
+    },
+    {
+        {&is1,        &is1,        &is1,        &is1},
+        {&is2,        &is1,        &is1,        &is1},
+        {&is2,        &is1,        &is2,        &is1},
+        {&is2,        &is2,        &is2,        &is1}
+    },
+    {
+        {&is2,        &is2,        &is2,        &is2},
+        {&is3,        &is2,        &is2,        &is2},
+        {&is3,        &is2,        &is3,        &is2},
+        {&is3,        &is3,        &is3,        &is2}
+    },
+    {
+        {&is3,        &is3,        &is3,        &is3},
+        {&is3,        &is3,        &is3,        &is3},
+        {&is3,        &is3,        &is3,        &is3},
+        {&is3,        &is3,        &is3,        &is3}
+    }
 };
 
 static const u8     egKeyScaleRateTable[16][16] =
@@ -355,11 +376,7 @@ static void Op_Envelope(OP *op, u8 ksv)
         }
         else
         {
-            shift = egIncStepTable[rate_hi & 3][rate_lo][oplClock & 3];
-            if (shift == 0)
-            {
-                shift = oplEgState;
-            }
+            shift = *egIncStepTable[rate_hi & 3][rate_lo][oplClock & 3];
         }
     }
     eg_rout = op->eg_rout;

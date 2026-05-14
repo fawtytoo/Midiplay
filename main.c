@@ -203,13 +203,13 @@ int main(int argc, char **argv)
 
     for (arg = 2; arg < argc; arg++)
     {
-        if ((name = strrchr(argv[arg], '/')) == NULL)
+        if ((name = strrchr(argv[arg], '/')) != NULL && strlen(name + 1) > 0)
         {
-            name = argv[arg];
+            name++;
         }
         else
         {
-            name++;
+            name = argv[arg];
         }
 
         count = Digits(argc - 2, 1);

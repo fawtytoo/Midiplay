@@ -1,4 +1,4 @@
-//  Copyright 2021-2025 by Steve Clark
+//  Copyright 2021-2026 by Steve Clark
 
 //  This software is provided 'as-is', without any express or implied
 //  warranty.  In no event will the authors be held liable for any damages
@@ -149,20 +149,21 @@ typedef void (*EVENT)(void);
 static void (*AddEvent)(EVENT);
 static u32 (*GetDelta)(void);
 
-typedef struct
+typedef struct _TRACK       TRACK;
+struct _TRACK
 {
+    TRACK       *prev, *next;
     u8      *track, *pos;
     u32     clock;
     EVENT   Event;
     int     channel;
     u8      data[3];
     u8      running;
-    int     done;
-}
-TRACK;
+};
 
-static TRACK        midTrack[65536], *curTrack, *endTrack;
-static int          numTracks, numTracksEnded;
+static TRACK        midTrack[65536], *curTrack;
+static TRACK        useTrack = {.prev = &useTrack, .next = &useTrack};
+static int          numTracks;
 
 static int          midType2;
 
@@ -654,15 +655,25 @@ static void SetBeatTempo(int tempo)
 
 static void InitTracks()
 {
+    TRACK       *track = &midTrack[0];
     int     i;
 
-    for (i = 0; i < numTracks; i++)
+    useTrack.prev = &useTrack;
+    useTrack.next = &useTrack;
+
+    for (i = 0; i < numTracks; i++, track++)
     {
-        midTrack[i].pos = midTrack[i].track;
-        midTrack[i].done = 0;
-        midTrack[i].clock = 0;
-        midTrack[i].Event = DoNothing;
+        track->pos = track->track;
+        track->clock = 0;
+        track->Event = DoNothing;
+
+        track->prev = useTrack.prev;
+        track->next = &useTrack;
+        track->prev->next = track;
+        track->next->prev = track;
     }
+
+    curTrack = useTrack.next;
 
     for (i = 0; i < 16; i++)
     {
@@ -681,9 +692,6 @@ static void InitTracks()
     SetBeatTempo(MICROSEC / 2);
     timerSample.acc = 0;
 
-    numTracksEnded = 0;
-    curTrack = &midTrack[0];
-
     timeTicks = timeRate = 0;
 
     timerPhase.acc = 0;
@@ -697,19 +705,19 @@ static void SetTempo()
 
 static void EndOfTrack()
 {
-    curTrack->done = 1;
-    numTracksEnded++;
+    curTrack->prev->next = curTrack->next;
+    curTrack->next->prev = curTrack->prev;
 }
 
 static void EndOfMidiTrack()
 {
     EndOfTrack();
-    curTrack->Event = DoNothing;
-    if (numTracksEnded < numTracks)
+    curTrack = curTrack->next; // still valid
+
+    if (useTrack.next != &useTrack)
     {
         if (midType2)
         {
-            curTrack++;
             curTrack->clock = musicClock;
         }
         return;
@@ -970,7 +978,7 @@ static void TrackMusEvents()
 {
     u32     ticks;
 
-    if (curTrack->done)
+    if (useTrack.next == &useTrack)
     {
         musicPlaying = 0;
         return;
@@ -998,7 +1006,7 @@ static void SingleTrackMidiEvents()
         {
             curTrack->Event();
 
-            if (curTrack->done)
+            if (curTrack == &useTrack)
             {
                 break;
             }
@@ -1013,15 +1021,35 @@ static void SingleTrackMidiEvents()
 
 static void TrackMidiEvents()
 {
-    curTrack = &midTrack[0];
+    TRACK       *last = useTrack.next;
+    u32         ticks;
+
+    curTrack = last;
 
     do
     {
-        SingleTrackMidiEvents();
+        if (curTrack->clock == musicClock)
+        {
+            do
+            {
+                curTrack->Event();
 
-        curTrack++;
+                if (curTrack != last)
+                {
+                    curTrack = curTrack->prev;
+                    break;
+                }
+
+                ticks = GetDelta();
+                curTrack->clock += ticks;
+                GetMidiEvent();
+            }
+            while (ticks == 0);
+        }
+
+        last = curTrack = curTrack->next;
     }
-    while (curTrack <= endTrack);
+    while (curTrack != &useTrack);
 }
 
 static int UpdateEvents()
@@ -1076,7 +1104,6 @@ static int LoadMidiTracks(int count, u8 *data, int size)
     }
 
     numTracks = count;
-    endTrack = &midTrack[numTracks - 1];
 
     GetDelta = GetDeltaMidi;
 
@@ -1111,7 +1138,6 @@ static int LoadHmpTrack(int count, u8 *data, int size)
     }
 
     numTracks = count;
-    endTrack = &midTrack[numTracks - 1];
 
     GetDelta = GetDeltaAlt;
 
@@ -1236,7 +1262,7 @@ int Midiplay_Load(void *data, int size)
     InitTracks();
 
     AddEvent = NoEvent;
-    while (numTracksEnded < numTracks)
+    while (useTrack.next != &useTrack)
     {
         UpdateEvents();
     }
@@ -1254,7 +1280,7 @@ void Midiplay_Play(int playing)
         return;
     }
 
-    if (numTracksEnded == numTracks)
+    if (useTrack.next == &useTrack)
     {
         InitTracks();
     }
@@ -1283,7 +1309,7 @@ int Midiplay_IsPlaying()
         return 0;
     }
 
-    if (numTracksEnded < numTracks)
+    if (useTrack.next != &useTrack)
     {
         return 1;
     }

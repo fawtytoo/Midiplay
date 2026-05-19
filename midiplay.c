@@ -146,7 +146,6 @@ static int      voiceCount = 0;
 #define MICROSEC    1000000
 
 typedef void (*EVENT)(void);
-static void (*AddEvent)(EVENT);
 static u32 (*GetDelta)(void);
 
 typedef struct _TRACK       TRACK;
@@ -174,6 +173,7 @@ static u32          musicClock;
 static int          timeTicks, timeRate;
 
 static EVENT        MusicEvents;
+static EVENT        DoNoteOn;
 
 // controller map for MUS
 static const int    controllerMap[16] = // CMD_TYPE would suggest only 16
@@ -786,17 +786,6 @@ static u32 GetDeltaAlt()
     return length;
 }
 
-// prevents unecessary events during inital score timing
-static void NoEvent(EVENT event)
-{
-    (void)event;
-}
-
-static void NewEvent(EVENT event)
-{
-    curTrack->Event = event;
-}
-
 static int GetMusEvent(u32 *time)
 {
     u8      data, last;
@@ -813,7 +802,7 @@ static int GetMusEvent(u32 *time)
     {
       case 0x00: // release note
         curTrack->data[0] = *curTrack->pos++ & 0x7f;
-        AddEvent(Event_NoteOff);
+        curTrack->Event = Event_NoteOff;
         break;
 
       case 0x10: // play note
@@ -829,24 +818,24 @@ static int GetMusEvent(u32 *time)
         {
             curTrack->data[1] = midChannel[curTrack->channel].prevVolume;
         }
-        AddEvent(Event_NoteOn);
+        curTrack->Event = DoNoteOn;
         break;
 
       case 0x20: // pitch wheel adjusted to 7 bit
         curTrack->data[0] = 0;
         curTrack->data[1] = *curTrack->pos++ >> 1;
-        AddEvent(Event_PitchWheel);
+        curTrack->Event = Event_PitchWheel;
         break;
 
       case 0x30: // system event
         curTrack->data[0] = controllerMap[*curTrack->pos++ & 0x0f];
-        AddEvent(Event_Message);
+        curTrack->Event = Event_Message;
         break;
 
       case 0x40: // change controller
         curTrack->data[0] = controllerMap[*curTrack->pos++ & 0x0f];
         curTrack->data[1] = *curTrack->pos++ & 0x7f;
-        AddEvent(Event_Message);
+        curTrack->Event = Event_Message;
         break;
 
       case 0x50: // end of measure?
@@ -856,7 +845,7 @@ static int GetMusEvent(u32 *time)
         last = 1; // assume last
         if (musicLooping && musicInit == 2)
         {
-            AddEvent(InitTracks);
+            curTrack->Event = InitTracks;
             last = 0;
         }
         else
@@ -906,43 +895,43 @@ static void GetMidiEvent()
       case 0x80:
         curTrack->data[0] = *curTrack->pos++ & 0x7f;
         curTrack->data[1] = *curTrack->pos++ & 0x7f;
-        AddEvent(Event_NoteOff);
+        curTrack->Event = Event_NoteOff;
         break;
 
       case 0x90:
         curTrack->data[0] = *curTrack->pos++ & 0x7f;
         curTrack->data[1] = *curTrack->pos++ & 0x7f;
-        AddEvent(Event_NoteOn);
+        curTrack->Event = DoNoteOn;
         break;
 
       case 0xa0:
         curTrack->data[0] = *curTrack->pos++ & 0x7f;
         curTrack->data[1] = *curTrack->pos++ & 0x7f;
-        AddEvent(Event_Aftertouch);
+        curTrack->Event = Event_Aftertouch;
         break;
 
       case 0xb0: // controller message
         curTrack->data[0] = *curTrack->pos++ & 0x7f;
         curTrack->data[1] = *curTrack->pos++ & 0x7f;
-        AddEvent(Event_Message);
+        curTrack->Event = Event_Message;
         break;
 
       case 0xc0:
         // instrument number must be in 2nd byte of event.data
         //  as that's where MUS puts it
         curTrack->data[1] = *curTrack->pos++ & 0x7f;
-        AddEvent(Event_ChangeInstrument);
+        curTrack->Event = Event_ChangeInstrument;
         break;
 
       case 0xd0:
         curTrack->data[0] = *curTrack->pos++ & 0x7f;
-        AddEvent(Event_ChannelAftertouch);
+        curTrack->Event = Event_ChannelAftertouch;
         break;
 
       case 0xe0: // pitch wheel
         curTrack->data[0] = *curTrack->pos++ & 0x7f; // fine
         curTrack->data[1] = *curTrack->pos++ & 0x7f; // coarse
-        AddEvent(Event_PitchWheel);
+        curTrack->Event = Event_PitchWheel;
         break;
 
       case 0xf0:
@@ -1174,7 +1163,7 @@ int Midiplay_Init(int samplerate, char *genmidi)
         Voice_ToList(&voiceList, voice);
     }
 
-    AddEvent = NewEvent;
+    DoNoteOn = Event_NoteOn;
 
     musicInit = 1;
 
@@ -1261,12 +1250,12 @@ int Midiplay_Load(void *data, int size)
 
     InitTracks();
 
-    AddEvent = NoEvent;
+    DoNoteOn = DoNothing;
     while (useTrack.next != &useTrack)
     {
         UpdateEvents();
     }
-    AddEvent = NewEvent;
+    DoNoteOn = Event_NoteOn;
 
     musicInit = 2;
 

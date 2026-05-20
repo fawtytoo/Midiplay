@@ -15,7 +15,6 @@ Midiplay is licensed under the Zlib license, and Nuked OPL3 v1.8 under the GNU L
 Supported MIDI formats:
 - MIDI (types 0, 1 & 2)[^3]
 - MUS (DMX)
-- HMP (both versions)
 
 Also supports the RMI file format; a RIFF container for MIDI.
 

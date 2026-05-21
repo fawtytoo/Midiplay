@@ -157,10 +157,11 @@ struct _TRACK
     int     channel;
     u8      data[3];
     u8      running;
+    int         done;
 };
 
 static TRACK        midTrack[65536], *curTrack;
-static TRACK        useTrack = {.prev = &useTrack, .next = &useTrack};
+static TRACK        useTrack = {.prev = &useTrack, .next = &useTrack, .done = 2};
 static int          numTracks;
 
 static int          midType2;
@@ -662,6 +663,7 @@ static void InitTracks()
     for (i = 0; i < numTracks; i++, track++)
     {
         track->pos = track->track;
+        track->done = midType2 ? 2 : 0;
         track->clock = 0;
         track->Event = DoNothing;
 
@@ -709,13 +711,13 @@ static void EndOfTrack()
 
 static void EndOfMidiTrack()
 {
+    curTrack->done = 1;
     EndOfTrack();
-    curTrack = curTrack->next; // still valid
-
     if (useTrack.next != &useTrack)
     {
         if (midType2)
         {
+            curTrack = curTrack->next;
             curTrack->clock = musicClock;
         }
         return;
@@ -956,35 +958,11 @@ static void TrackMusEvents()
     curTrack->clock += ticks;
 }
 
-static void SingleTrackMidiEvents()
-{
-    u32     ticks;
-
-    if (curTrack->clock == musicClock)
-    {
-        do
-        {
-            curTrack->Event();
-
-            if (curTrack == &useTrack)
-            {
-                break;
-            }
-
-            ticks = GetDelta();
-            curTrack->clock += ticks;
-            GetMidiEvent();
-        }
-        while (ticks == 0);
-    }
-}
-
 static void TrackMidiEvents()
 {
-    TRACK       *last = useTrack.next;
     u32         ticks;
 
-    curTrack = last;
+    curTrack = useTrack.next;
 
     do
     {
@@ -994,9 +972,8 @@ static void TrackMidiEvents()
             {
                 curTrack->Event();
 
-                if (curTrack != last)
+                if (curTrack->done == 1)
                 {
-                    curTrack = curTrack->prev;
                     break;
                 }
 
@@ -1007,9 +984,9 @@ static void TrackMidiEvents()
             while (ticks == 0);
         }
 
-        last = curTrack = curTrack->next;
+        curTrack = curTrack->next;
     }
-    while (curTrack != &useTrack);
+    while (curTrack->done != 2);
 }
 
 static int UpdateEvents()
@@ -1150,7 +1127,6 @@ int Midiplay_Load(void *data, int size)
         if (BE16(byte + 8) == 2)
         {
             midType2 = 1;
-            MusicEvents = SingleTrackMidiEvents;
         }
     }
     else

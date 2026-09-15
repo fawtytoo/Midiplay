@@ -447,6 +447,8 @@ static s16 Op_Wave1(u16 phase, u16 *neg)
 
 static s16 Op_Wave2(u16 phase, u16 *neg)
 {
+    (void)neg;
+
     if (phase & 0x200)
     {
         return 0x1000;
@@ -457,11 +459,15 @@ static s16 Op_Wave2(u16 phase, u16 *neg)
 
 static s16 Op_Wave3(u16 phase, u16 *neg)
 {
+    (void)neg;
+
     return sineTable[phase & 0x1ff];
 }
 
 static s16 Op_Wave4(u16 phase, u16 *neg)
 {
+    (void)neg;
+
     if (phase & 0x100)
     {
         return 0x1000;
@@ -487,6 +493,8 @@ static s16 Op_Wave5(u16 phase, u16 *neg)
 
 static s16 Op_Wave6(u16 phase, u16 *neg)
 {
+    (void)neg;
+
     if (phase & 0x200)
     {
         return 0x1000;

@@ -1194,7 +1194,6 @@ int Midiplay_IsPlaying()
 
 void Midiplay_Output(int sample[2])
 {
-    int     buffer[2] = {0, 0};
     int     rate;
     int     divisor = 256;
 
@@ -1211,11 +1210,11 @@ void Midiplay_Output(int sample[2])
     divisor *= rate;
     while (rate--)
     {
-        OPL_Generate(buffer);
+        OPL_Generate(sample);
     }
 
-    sample[0] = buffer[0] * musicVolume / divisor;
-    sample[1] = buffer[1] * musicVolume / divisor;
+    sample[0] = sample[0] * musicVolume / divisor;
+    sample[1] = sample[1] * musicVolume / divisor;
 }
 
 int Midiplay_Time()

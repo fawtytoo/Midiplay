@@ -73,6 +73,7 @@ void SdlCallback(void *unused, Uint8 *stream, int length)
 
     while (length)
     {
+        sample[0] = sample[1] = 0;
         Midiplay_Output(sample);
         *output++ = Clamp(sample[0]);
         *output++ = Clamp(sample[1]);
